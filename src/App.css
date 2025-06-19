@@ -1,0 +1,214 @@
+body {
+  background: linear-gradient(120deg, #f7f7f7 60%, #e3f0ff 100%);
+  font-family: 'Segoe UI', Arial, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#root {
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  min-width: 0;
+  margin: 40px auto;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 32px #0002;
+  padding: 32px 32px 24px 32px;
+  transition: box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+h1 {
+  color: #2563eb;
+  margin-bottom: 24px;
+  font-size: 2.2rem;
+  letter-spacing: 1px;
+  text-align: left;
+}
+
+.chore-form {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.chore-form input[type="text"],
+.chore-form input[type="date"],
+.chore-form input[type="number"] {
+  flex: 1 1 160px;
+  padding: 10px;
+  border: 1.5px solid #b6c6e3;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: #f8fbff;
+  transition: border 0.2s;
+  min-width: 120px;
+}
+.chore-form input:focus {
+  border: 1.5px solid #2563eb;
+  outline: none;
+}
+.chore-form button {
+  padding: 10px 20px;
+  border: none;
+  background: linear-gradient(90deg, #2563eb 60%, #60a5fa 100%);
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1rem;
+  box-shadow: 0 2px 8px #2563eb22;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.chore-form button:hover {
+  background: linear-gradient(90deg, #1d4ed8 60%, #38bdf8 100%);
+  box-shadow: 0 4px 16px #2563eb33;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+ul li {
+  background: #f1f6ff;
+  margin-bottom: 8px;
+  padding: 12px 10px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1rem;
+  box-shadow: 0 1px 4px #2563eb11;
+}
+ul li button {
+  background: none;
+  border: none;
+  color: #d00;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 8px;
+  transition: background 0.2s;
+}
+ul li button:hover {
+  background: #ffe3e3;
+}
+
+.fc {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 8px #2563eb11;
+  margin-bottom: 24px;
+  padding: 8px;
+  width: 100%;
+}
+
+@media (max-width: 1400px) {
+  .container {
+    max-width: 98vw;
+    padding: 24px 2vw 16px 2vw;
+  }
+}
+@media (max-width: 900px) {
+  .container {
+    max-width: 100vw;
+    padding: 12px 1vw 8px 1vw;
+    border-radius: 0;
+  }
+  h1 {
+    font-size: 1.3rem;
+  }
+  .chore-form input, .chore-form button {
+    font-size: 0.95rem;
+    padding: 8px;
+  }
+}
+@media (max-width: 600px) {
+  .container {
+    max-width: 100vw;
+    padding: 4px 0 4px 0;
+    border-radius: 0;
+  }
+  .fc {
+    padding: 0;
+  }
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(30,40,60,0.25);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px #2563eb33;
+  padding: 32px 24px 20px 24px;
+  min-width: 320px;
+  max-width: 90vw;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: modal-in 0.18s cubic-bezier(.4,2,.6,1) both;
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(40px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.modal h2 {
+  margin: 0 0 8px 0;
+  color: #2563eb;
+  font-size: 1.3rem;
+}
+.modal input {
+  padding: 8px;
+  border: 1px solid #b6c6e3;
+  border-radius: 5px;
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+.modal-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  background: #2563eb;
+  color: #fff;
+  transition: background 0.2s;
+}
+.modal-actions button.delete {
+  background: #e11d48;
+}
+.modal-actions button.delete:hover {
+  background: #be123c;
+}
+.modal-actions button:not(.delete):hover {
+  background: #1d4ed8;
+}
