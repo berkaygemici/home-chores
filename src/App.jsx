@@ -24,25 +24,46 @@ import { format, isBefore, isToday, isPast } from 'date-fns'
 
 const SECTIONS = ['All', 'Kitchen', 'Closet', 'Bathroom', 'Living Room', 'Bedroom', 'Other']
 
+const REPEAT_OPTIONS = [
+  { value: 'none', label: 'Does not repeat' },
+  { value: 'daily', label: 'Every day' },
+  { value: 'weekly', label: 'Every week on this day' },
+  { value: 'monthly', label: 'Every month on this date' },
+  { value: 'yearly', label: 'Every year on this date' },
+  { value: 'weekdays', label: 'Every weekday (Mon–Fri)' },
+  { value: 'custom', label: 'Custom...' },
+]
+
 function addRecurringEvents(chore, choreIdx) {
   const events = []
-  const { name, dateTime, repeat, section, doneDates = [] } = chore
+  const { name, dateTime, repeat = 'none', section, doneDates = [], deletedDates = [], description } = chore
   if (!dateTime) return events
-  const repeatNum = parseInt(repeat)
   let date = new Date(dateTime)
   const today = new Date()
-  // 1 yıl ileriye kadar göster
-  while (date <= new Date(today.getFullYear(), today.getMonth() + 6, today.getDate())) {
+  let count = 0
+  while (date <= new Date(today.getFullYear(), today.getMonth() + 6, today.getDate()) && count < 500) {
     const iso = date.toISOString()
-    const isDone = doneDates.includes(iso)
-    events.push({
-      title: name,
-      date: iso,
-      extendedProps: { choreIdx, section, isDone, dateTime: iso },
-      color: isDone ? '#b2f2bb' : (isPast(date) && !isDone ? '#ffb3b3' : undefined)
-    })
-    if (!repeatNum) break
-    date.setDate(date.getDate() + repeatNum)
+    if (!deletedDates?.includes(iso)) {
+      const isDone = doneDates.includes(iso)
+      events.push({
+        title: name,
+        date: iso,
+        extendedProps: { choreIdx, section, isDone, dateTime: iso, description },
+        color: isDone ? '#b2f2bb' : (isPast(date) && !isDone ? '#ffb3b3' : undefined)
+      })
+    }
+    // Repeat logic
+    if (repeat === 'none') break
+    if (repeat === 'daily') date.setDate(date.getDate() + 1)
+    else if (repeat === 'weekly') date.setDate(date.getDate() + 7)
+    else if (repeat === 'monthly') {
+      date.setMonth(date.getMonth() + 1)
+    } else if (repeat === 'yearly') {
+      date.setFullYear(date.getFullYear() + 1)
+    } else if (repeat === 'weekdays') {
+      do { date.setDate(date.getDate() + 1) } while ([0, 6].includes(date.getDay()))
+    } else break
+    count++
   }
   return events
 }
@@ -50,16 +71,18 @@ function addRecurringEvents(chore, choreIdx) {
 function TaskModal({ open, onClose, onSave, initial, sections, onDelete }) {
   const [name, setName] = useState(initial?.name || '')
   const [dateTime, setDateTime] = useState(initial?.dateTime ? new Date(initial.dateTime) : new Date())
-  const [repeat, setRepeat] = useState(initial?.repeat || '')
+  const [repeat, setRepeat] = useState(initial?.repeat || 'none')
   const [section, setSection] = useState(initial?.section || (sections[0] || 'Other'))
+  const [description, setDescription] = useState(initial?.description || '')
   const [deletePrompt, setDeletePrompt] = useState(false)
   const [deleteType, setDeleteType] = useState('')
 
   useEffect(() => {
     setName(initial?.name || '')
     setDateTime(initial?.dateTime ? new Date(initial.dateTime) : new Date())
-    setRepeat(initial?.repeat || '')
+    setRepeat(initial?.repeat || 'none')
     setSection(initial?.section || (sections[0] || 'Other'))
+    setDescription(initial?.description || '')
     setDeletePrompt(false)
     setDeleteType('')
   }, [initial, sections, open])
@@ -68,7 +91,7 @@ function TaskModal({ open, onClose, onSave, initial, sections, onDelete }) {
   const handleDeleteConfirm = (type) => {
     setDeleteType(type)
     setDeletePrompt(false)
-    onDelete(type)
+    onDelete(type, dateTime.toISOString())
   }
 
   return (
@@ -85,18 +108,24 @@ function TaskModal({ open, onClose, onSave, initial, sections, onDelete }) {
             renderInput={(params) => <TextField {...params} />}
           />
         </LocalizationProvider>
-        <TextField label="Repeat (days)" type="number" value={repeat} onChange={e => setRepeat(e.target.value)} />
+        <FormControl fullWidth>
+          <InputLabel>Repeat</InputLabel>
+          <Select value={repeat} label="Repeat" onChange={e => setRepeat(e.target.value)}>
+            {REPEAT_OPTIONS.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
+          </Select>
+        </FormControl>
         <FormControl fullWidth>
           <InputLabel>Section</InputLabel>
           <Select value={section} label="Section" onChange={e => setSection(e.target.value)}>
             {sections.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </Select>
         </FormControl>
+        <TextField label="Description (optional)" value={description} onChange={e => setDescription(e.target.value)} multiline minRows={2} />
       </DialogContent>
       <DialogActions>
         {onDelete && <Button color="error" startIcon={<DeleteIcon />} onClick={handleDelete}>Delete</Button>}
         <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={() => onSave({ name, dateTime: dateTime.toISOString(), repeat, section })}>{initial ? 'Save' : 'Add'}</Button>
+        <Button variant="contained" onClick={() => onSave({ name, dateTime: dateTime.toISOString(), repeat, section, description })}>{initial ? 'Save' : 'Add'}</Button>
       </DialogActions>
       <Dialog open={deletePrompt} onClose={()=>setDeletePrompt(false)}>
         <DialogTitle>Delete Task</DialogTitle>
@@ -201,7 +230,7 @@ export default function App() {
 
   // Task handlers
   const handleAddTask = async (task) => {
-    await saveChores([...chores, { ...task, doneDates: [] }])
+    await saveChores([...chores, { ...task, doneDates: [], deletedDates: [] }])
     setModalOpen(false)
     setQuickAddDate(null)
   }
@@ -213,16 +242,15 @@ export default function App() {
     setModalOpen(false)
     setQuickAddDate(null)
   }
-  const handleDeleteTask = async (type) => {
+  const handleDeleteTask = async (type, isoDate) => {
     if (editIdx == null) return
     if (type === 'all') {
       const newChores = chores.filter((_, i) => i !== editIdx)
       await saveChores(newChores)
-    } else if (type === 'single' && modalInitial && modalInitial.dateTime) {
-      const iso = modalInitial.dateTime
+    } else if (type === 'single' && modalInitial && isoDate) {
       const newChores = chores.map((c, i) => {
         if (i !== editIdx) return c
-        return { ...c, doneDates: (c.doneDates || []).filter(d => d !== iso) }
+        return { ...c, deletedDates: [...(c.deletedDates || []), isoDate] }
       })
       await saveChores(newChores)
     }
@@ -279,13 +307,20 @@ export default function App() {
       // For recurring, generate all occurrences for today
       const occurrences = []
       let date = new Date(task.dateTime)
-      const repeatNum = parseInt(task.repeat)
-      while (format(date, 'yyyy-MM-dd') <= todayStr) {
-        if (format(date, 'yyyy-MM-dd') === todayStr) {
+      const repeat = task.repeat || 'none'
+      let count = 0
+      while (format(date, 'yyyy-MM-dd') <= todayStr && count < 500) {
+        if (format(date, 'yyyy-MM-dd') === todayStr && !(task.deletedDates||[]).includes(date.toISOString())) {
           occurrences.push({ ...task, occurrenceDate: date.toISOString(), taskIdx: idx })
         }
-        if (!repeatNum) break
-        date.setDate(date.getDate() + repeatNum)
+        if (repeat === 'none') break
+        if (repeat === 'daily') date.setDate(date.getDate() + 1)
+        else if (repeat === 'weekly') date.setDate(date.getDate() + 7)
+        else if (repeat === 'monthly') date.setMonth(date.getMonth() + 1)
+        else if (repeat === 'yearly') date.setFullYear(date.getFullYear() + 1)
+        else if (repeat === 'weekdays') { do { date.setDate(date.getDate() + 1) } while ([0, 6].includes(date.getDay())) }
+        else break
+        count++
       }
       return occurrences
     })
@@ -368,6 +403,7 @@ export default function App() {
               }}
               eventContent={renderEventContent}
               eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+              slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
             />
           </LocalizationProvider>
           <Box sx={{mt:3}}>
@@ -377,11 +413,17 @@ export default function App() {
               {filteredChores.map((chore, i) => {
                 // For recurring, show the next occurrence
                 const nextDate = new Date(chore.dateTime)
-                const repeatNum = parseInt(chore.repeat)
+                const repeat = chore.repeat || 'none'
                 let occurrence = nextDate
-                while (isPast(occurrence) && repeatNum) {
-                  occurrence = new Date(occurrence)
-                  occurrence.setDate(occurrence.getDate() + repeatNum)
+                let count = 0
+                while (isPast(occurrence) && repeat !== 'none' && count < 500) {
+                  if (repeat === 'daily') occurrence.setDate(occurrence.getDate() + 1)
+                  else if (repeat === 'weekly') occurrence.setDate(occurrence.getDate() + 7)
+                  else if (repeat === 'monthly') occurrence.setMonth(occurrence.getMonth() + 1)
+                  else if (repeat === 'yearly') occurrence.setFullYear(occurrence.getFullYear() + 1)
+                  else if (repeat === 'weekdays') { do { occurrence.setDate(occurrence.getDate() + 1) } while ([0, 6].includes(occurrence.getDay())) }
+                  else break
+                  count++
                 }
                 const iso = occurrence.toISOString()
                 const isDone = (chore.doneDates||[]).includes(iso)
@@ -423,15 +465,17 @@ export default function App() {
   )
 }
 
-// Custom event content for calendar: show done/overdue, 24h, truncate text
+// Custom event content for calendar: show done/overdue, 24h, truncate text, show description as tooltip
 function renderEventContent(arg) {
   const isDone = arg.event.extendedProps.isDone
   const isOverdue = isPast(new Date(arg.event.start)) && !isDone
+  const description = arg.event.extendedProps.description
   // Truncate long text, show full on hover
   const maxLen = 18
   const title = arg.event.title.length > maxLen ? arg.event.title.slice(0, maxLen) + '…' : arg.event.title
+  const tooltip = description ? `${arg.event.title}\n${description}` : arg.event.title
   return (
-    <Tooltip title={arg.event.title} arrow>
+    <Tooltip title={tooltip} arrow>
       <Box sx={{display:'flex', alignItems:'center', gap:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth: '100%'}}>
         <span className="fc-checkbox" style={{display:'flex', alignItems:'center', cursor:'pointer'}}>
           <Checkbox checked={isDone} icon={<RadioButtonUncheckedIcon fontSize="small"/>} checkedIcon={<CheckCircleIcon fontSize="small"/>} sx={{p:0, mr:0.5}} disabled />
