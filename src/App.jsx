@@ -8,14 +8,13 @@ import { auth, db } from './firebase'
 import { doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc } from 'firebase/firestore'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import {
-  AppBar, Toolbar, Typography, IconButton, Drawer, List, ListItem, ListItemText, Button, Box, Fab, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, InputLabel, FormControl
+  Box, Button, Fab, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, InputLabel, FormControl, Typography, Paper, List, ListItem, ListItemText, IconButton, Chip, Stack
 } from '@mui/material'
-import MenuIcon from '@mui/icons-material/Menu'
 import AddIcon from '@mui/icons-material/Add'
-import LogoutIcon from '@mui/icons-material/Logout'
-import SettingsIcon from '@mui/icons-material/Settings'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
+import SettingsIcon from '@mui/icons-material/Settings'
+import LogoutIcon from '@mui/icons-material/Logout'
 
 const SECTIONS = ['All', 'Kitchen', 'Closet', 'Bathroom', 'Living Room', 'Bedroom', 'Other']
 
@@ -71,25 +70,26 @@ function TaskModal({ open, onClose, onSave, initial, sections, onDelete }) {
   )
 }
 
-function SectionDrawer({ open, onClose, sections, onAdd, onDelete }) {
+function SectionModal({ open, onClose, sections, onAdd, onDelete }) {
   const [newSection, setNewSection] = useState('')
   return (
-    <Drawer anchor="left" open={open} onClose={onClose}>
-      <Box sx={{width:300, p:2}}>
-        <Typography variant="h6" sx={{mb:2}}>Manage Sections</Typography>
-        <List>
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>Manage Sections</DialogTitle>
+      <DialogContent sx={{minWidth:300}}>
+        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{mb:2}}>
           {sections.map(s => (
-            <ListItem key={s} secondaryAction={s!=='Other'&&<IconButton edge="end" color="error" onClick={()=>onDelete(s)}><DeleteIcon/></IconButton>}>
-              <ListItemText primary={s} />
-            </ListItem>
+            <Chip key={s} label={s} onDelete={s!=='Other'?()=>onDelete(s):undefined} color={s==='Other'?'default':'primary'} sx={{mb:1}} />
           ))}
-        </List>
-        <Box sx={{display:'flex', gap:1, mt:2}}>
+        </Stack>
+        <Box sx={{display:'flex', gap:1}}>
           <TextField label="New section" value={newSection} onChange={e=>setNewSection(e.target.value)} fullWidth />
           <Button variant="contained" onClick={()=>{if(newSection) {onAdd(newSection); setNewSection('')}}}>Add</Button>
         </Box>
-      </Box>
-    </Drawer>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
   )
 }
 
@@ -99,7 +99,7 @@ export default function App() {
   const [sections, setSections] = useState(['Other'])
   const [modalOpen, setModalOpen] = useState(false)
   const [editIdx, setEditIdx] = useState(null)
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [sectionModalOpen, setSectionModalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [filterSection, setFilterSection] = useState('All')
 
@@ -189,25 +189,20 @@ export default function App() {
   if (!user) return <AuthPage onAuth={setUser} />
 
   return (
-    <Box sx={{bgcolor:'#f5f7fa', minHeight:'100vh'}}>
-      <AppBar position="static" color="primary" sx={{mb:3}}>
-        <Toolbar>
-          <IconButton color="inherit" edge="start" onClick={()=>setDrawerOpen(true)}><MenuIcon/></IconButton>
-          <Typography variant="h6" sx={{flexGrow:1}}>Home Chores</Typography>
-          <Button color="inherit" startIcon={<LogoutIcon/>} onClick={()=>signOut(auth)}>Logout</Button>
-        </Toolbar>
-      </AppBar>
-      <SectionDrawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} sections={sections} onAdd={handleAddSection} onDelete={handleDeleteSection} />
-      <Box sx={{maxWidth:900, mx:'auto', p:2}}>
-        <Box sx={{display:'flex', alignItems:'center', gap:2, mb:2}}>
-          <FormControl>
+    <Box sx={{bgcolor:'linear-gradient(120deg, #f5f7fa 60%, #e3f0ff 100%)', minHeight:'100vh', fontFamily:'Inter, system-ui, sans-serif', display:'flex', alignItems:'center', justifyContent:'center'}}>
+      <Paper elevation={4} sx={{maxWidth: 900, width:'100%', mx:'auto', my:6, p:{xs:2,sm:4}, borderRadius:5, boxShadow: '0 8px 32px #2563eb22'}}>
+        <Box sx={{display:'flex', flexDirection:{xs:'column',sm:'row'}, alignItems:{sm:'center'}, justifyContent:'space-between', gap:2, mb:3}}>
+          <FormControl sx={{minWidth:180}} size="small">
             <InputLabel>Filter by section</InputLabel>
-            <Select value={filterSection} label="Filter by section" onChange={e=>setFilterSection(e.target.value)} sx={{minWidth:160}}>
+            <Select value={filterSection} label="Filter by section" onChange={e=>setFilterSection(e.target.value)}>
               <MenuItem value="All">All</MenuItem>
               {sections.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>
           </FormControl>
-          <Button variant="outlined" startIcon={<SettingsIcon/>} onClick={()=>setDrawerOpen(true)}>Manage Sections</Button>
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" color="primary" startIcon={<SettingsIcon/>} onClick={()=>setSectionModalOpen(true)} sx={{borderRadius:99, fontWeight:600}}>Manage Sections</Button>
+            <Button variant="outlined" color="error" startIcon={<LogoutIcon/>} onClick={()=>signOut(auth)} sx={{borderRadius:99, fontWeight:600}}>Logout</Button>
+          </Stack>
         </Box>
         <FullCalendar
           plugins={[dayGridPlugin, interactionPlugin]}
@@ -229,7 +224,7 @@ export default function App() {
             ))}
           </List>
         </Box>
-        <Fab color="primary" aria-label="add" sx={{position:'fixed', bottom:32, right:32}} onClick={()=>{setEditIdx(null); setModalOpen(true);}}>
+        <Fab color="primary" aria-label="add" sx={{position:'fixed', bottom:32, right:32, boxShadow:'0 4px 24px #2563eb44', fontWeight:700}} onClick={()=>{setEditIdx(null); setModalOpen(true);}}>
           <AddIcon />
         </Fab>
         <TaskModal
@@ -240,7 +235,14 @@ export default function App() {
           sections={sections}
           onDelete={editIdx!=null?handleDeleteTask:undefined}
         />
-      </Box>
+        <SectionModal
+          open={sectionModalOpen}
+          onClose={()=>setSectionModalOpen(false)}
+          sections={sections}
+          onAdd={handleAddSection}
+          onDelete={handleDeleteSection}
+        />
+      </Paper>
     </Box>
   )
 }
