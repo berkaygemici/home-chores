@@ -9,7 +9,7 @@ import { auth, db } from './firebase'
 import { doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc } from 'firebase/firestore'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import {
-  Box, Button, Fab, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, InputLabel, FormControl, Typography, Paper, List, ListItem, ListItemText, IconButton, Chip, Stack, Checkbox, Drawer, Divider
+  Box, Button, Fab, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, InputLabel, FormControl, Typography, Paper, List, ListItem, ListItemText, IconButton, Chip, Stack, Checkbox, Drawer, Divider, Tooltip, DialogContentText
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -52,13 +52,24 @@ function TaskModal({ open, onClose, onSave, initial, sections, onDelete }) {
   const [dateTime, setDateTime] = useState(initial?.dateTime ? new Date(initial.dateTime) : new Date())
   const [repeat, setRepeat] = useState(initial?.repeat || '')
   const [section, setSection] = useState(initial?.section || (sections[0] || 'Other'))
+  const [deletePrompt, setDeletePrompt] = useState(false)
+  const [deleteType, setDeleteType] = useState('')
 
   useEffect(() => {
     setName(initial?.name || '')
     setDateTime(initial?.dateTime ? new Date(initial.dateTime) : new Date())
     setRepeat(initial?.repeat || '')
     setSection(initial?.section || (sections[0] || 'Other'))
-  }, [initial, sections])
+    setDeletePrompt(false)
+    setDeleteType('')
+  }, [initial, sections, open])
+
+  const handleDelete = () => setDeletePrompt(true)
+  const handleDeleteConfirm = (type) => {
+    setDeleteType(type)
+    setDeletePrompt(false)
+    onDelete(type)
+  }
 
   return (
     <Dialog open={open} onClose={onClose}>
@@ -70,6 +81,7 @@ function TaskModal({ open, onClose, onSave, initial, sections, onDelete }) {
             label="Date & Time"
             value={dateTime}
             onChange={setDateTime}
+            ampm={false}
             renderInput={(params) => <TextField {...params} />}
           />
         </LocalizationProvider>
@@ -82,10 +94,23 @@ function TaskModal({ open, onClose, onSave, initial, sections, onDelete }) {
         </FormControl>
       </DialogContent>
       <DialogActions>
-        {onDelete && <Button color="error" startIcon={<DeleteIcon />} onClick={onDelete}>Delete</Button>}
+        {onDelete && <Button color="error" startIcon={<DeleteIcon />} onClick={handleDelete}>Delete</Button>}
         <Button onClick={onClose}>Cancel</Button>
         <Button variant="contained" onClick={() => onSave({ name, dateTime: dateTime.toISOString(), repeat, section })}>{initial ? 'Save' : 'Add'}</Button>
       </DialogActions>
+      <Dialog open={deletePrompt} onClose={()=>setDeletePrompt(false)}>
+        <DialogTitle>Delete Task</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Do you want to delete only this occurrence or all occurrences of this task?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={()=>setDeletePrompt(false)}>Cancel</Button>
+          <Button color="error" onClick={()=>handleDeleteConfirm('single')}>Only this occurrence</Button>
+          <Button color="error" onClick={()=>handleDeleteConfirm('all')}>All occurrences</Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   )
 }
@@ -125,6 +150,7 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [modalInitial, setModalInitial] = useState(null)
   const [quickAddDate, setQuickAddDate] = useState(null)
+  const [deleteContext, setDeleteContext] = useState({})
 
   // Auth state
   useEffect(() => {
@@ -187,10 +213,19 @@ export default function App() {
     setModalOpen(false)
     setQuickAddDate(null)
   }
-  const handleDeleteTask = async () => {
+  const handleDeleteTask = async (type) => {
     if (editIdx == null) return
-    const newChores = chores.filter((_, i) => i !== editIdx)
-    await saveChores(newChores)
+    if (type === 'all') {
+      const newChores = chores.filter((_, i) => i !== editIdx)
+      await saveChores(newChores)
+    } else if (type === 'single' && modalInitial && modalInitial.dateTime) {
+      const iso = modalInitial.dateTime
+      const newChores = chores.map((c, i) => {
+        if (i !== editIdx) return c
+        return { ...c, doneDates: (c.doneDates || []).filter(d => d !== iso) }
+      })
+      await saveChores(newChores)
+    }
     setEditIdx(null)
     setModalOpen(false)
     setQuickAddDate(null)
@@ -315,6 +350,13 @@ export default function App() {
               height="auto"
               headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }}
               eventClick={info => {
+                // If click is on the checkbox, mark as done/undone
+                const box = info.jsEvent.target.closest('.fc-checkbox')
+                if (box) {
+                  const { choreIdx, dateTime } = info.event.extendedProps
+                  handleToggleDone(choreIdx, dateTime)
+                  return
+                }
                 setEditIdx(info.event.extendedProps.choreIdx)
                 setModalInitial(filteredChores[info.event.extendedProps.choreIdx])
                 setModalOpen(true)
@@ -325,6 +367,7 @@ export default function App() {
                 setModalOpen(true)
               }}
               eventContent={renderEventContent}
+              eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
             />
           </LocalizationProvider>
           <Box sx={{mt:3}}>
@@ -380,14 +423,21 @@ export default function App() {
   )
 }
 
-// Custom event content for calendar: show done/overdue
+// Custom event content for calendar: show done/overdue, 24h, truncate text
 function renderEventContent(arg) {
   const isDone = arg.event.extendedProps.isDone
   const isOverdue = isPast(new Date(arg.event.start)) && !isDone
+  // Truncate long text, show full on hover
+  const maxLen = 18
+  const title = arg.event.title.length > maxLen ? arg.event.title.slice(0, maxLen) + '…' : arg.event.title
   return (
-    <Box sx={{display:'flex', alignItems:'center', gap:1}}>
-      <Checkbox checked={isDone} icon={<RadioButtonUncheckedIcon fontSize="small"/>} checkedIcon={<CheckCircleIcon fontSize="small"/>} sx={{p:0, mr:0.5}} disabled />
-      <span style={{textDecoration: isDone ? 'line-through' : undefined, color: isOverdue ? '#d32f2f' : undefined}}>{arg.event.title}</span>
-    </Box>
+    <Tooltip title={arg.event.title} arrow>
+      <Box sx={{display:'flex', alignItems:'center', gap:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth: '100%'}}>
+        <span className="fc-checkbox" style={{display:'flex', alignItems:'center', cursor:'pointer'}}>
+          <Checkbox checked={isDone} icon={<RadioButtonUncheckedIcon fontSize="small"/>} checkedIcon={<CheckCircleIcon fontSize="small"/>} sx={{p:0, mr:0.5}} disabled />
+        </span>
+        <span style={{textDecoration: isDone ? 'line-through' : undefined, color: isOverdue ? '#d32f2f' : undefined, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth: 120}}>{title}</span>
+      </Box>
+    </Tooltip>
   )
 }
