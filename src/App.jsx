@@ -21,6 +21,7 @@ import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
 import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { format, isBefore, isToday, isPast } from 'date-fns'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 
 const SECTIONS = ['All', 'Kitchen', 'Closet', 'Bathroom', 'Living Room', 'Bedroom', 'Other']
 
@@ -180,6 +181,8 @@ export default function App() {
   const [modalInitial, setModalInitial] = useState(null)
   const [quickAddDate, setQuickAddDate] = useState(null)
   const [deleteContext, setDeleteContext] = useState({})
+  const [shareOpen, setShareOpen] = useState(false)
+  const shareUrl = `${window.location.origin}/share/${user ? user.uid : ''}`
 
   // Auth state
   useEffect(() => {
@@ -359,6 +362,7 @@ export default function App() {
         </Box>
         <Divider sx={{my:2}}/>
         <Button variant="contained" color="primary" startIcon={<SettingsIcon/>} onClick={()=>setSectionModalOpen(true)} sx={{borderRadius:99, fontWeight:600, mx:2}}>Manage Sections</Button>
+        <Button variant="outlined" color="primary" startIcon={<ContentCopyIcon/>} onClick={()=>setShareOpen(true)} sx={{borderRadius:99, fontWeight:600, mx:2, mt:1}}>Share Calendar</Button>
         <Button variant="outlined" color="error" startIcon={<LogoutIcon/>} onClick={()=>signOut(auth)} sx={{borderRadius:99, fontWeight:600, mx:2, mt:1}}>Logout</Button>
       </Drawer>
       {/* Main Content */}
@@ -384,6 +388,7 @@ export default function App() {
               events={events}
               height="auto"
               headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }}
+              nowIndicator={true}
               eventClick={info => {
                 // If click is on the checkbox, mark as done/undone
                 const box = info.jsEvent.target.closest('.fc-checkbox')
@@ -406,44 +411,6 @@ export default function App() {
               slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
             />
           </LocalizationProvider>
-          <Box sx={{mt:3}}>
-            <Typography variant="h5" sx={{mb:1}}>Tasks</Typography>
-            <List>
-              {filteredChores.length === 0 && <ListItem><ListItemText primary="No tasks added yet." /></ListItem>}
-              {filteredChores.map((chore, i) => {
-                // For recurring, show the next occurrence
-                const nextDate = new Date(chore.dateTime)
-                const repeat = chore.repeat || 'none'
-                let occurrence = nextDate
-                let count = 0
-                while (isPast(occurrence) && repeat !== 'none' && count < 500) {
-                  if (repeat === 'daily') occurrence.setDate(occurrence.getDate() + 1)
-                  else if (repeat === 'weekly') occurrence.setDate(occurrence.getDate() + 7)
-                  else if (repeat === 'monthly') occurrence.setMonth(occurrence.getMonth() + 1)
-                  else if (repeat === 'yearly') occurrence.setFullYear(occurrence.getFullYear() + 1)
-                  else if (repeat === 'weekdays') { do { occurrence.setDate(occurrence.getDate() + 1) } while ([0, 6].includes(occurrence.getDay())) }
-                  else break
-                  count++
-                }
-                const iso = occurrence.toISOString()
-                const isDone = (chore.doneDates||[]).includes(iso)
-                const isOverdue = isPast(occurrence) && !isDone
-                return (
-                  <ListItem key={i} sx={{borderRadius:2, mb:1, bgcolor: isDone ? '#e6ffed' : (isOverdue ? '#ffeaea' : '#fff')}}
-                    secondaryAction={
-                      <IconButton edge="end" onClick={()=>{setEditIdx(i); setModalInitial(chore); setModalOpen(true);}}><EditIcon/></IconButton>
-                    }
-                  >
-                    <Checkbox checked={isDone} onChange={()=>handleToggleDone(i, iso)} icon={<RadioButtonUncheckedIcon/>} checkedIcon={<CheckCircleIcon/>} />
-                    <ListItemText
-                      primary={<span style={{textDecoration: isDone ? 'line-through' : undefined, color: isOverdue ? '#d32f2f' : undefined}}>{chore.name}</span>}
-                      secondary={format(occurrence, 'yyyy-MM-dd HH:mm') + (chore.section ? ` • ${chore.section}` : '')}
-                    />
-                  </ListItem>
-                )
-              })}
-            </List>
-          </Box>
           <TaskModal
             open={modalOpen}
             onClose={()=>{setModalOpen(false); setEditIdx(null); setModalInitial(null); setQuickAddDate(null);}}
@@ -459,6 +426,19 @@ export default function App() {
             onAdd={handleAddSection}
             onDelete={handleDeleteSection}
           />
+          <Dialog open={shareOpen} onClose={()=>setShareOpen(false)}>
+            <DialogTitle>Share Calendar</DialogTitle>
+            <DialogContent>
+              <Typography>Anyone with this link can view your calendar (read-only):</Typography>
+              <Box sx={{display:'flex', alignItems:'center', mt:2}}>
+                <TextField value={shareUrl} fullWidth InputProps={{readOnly:true}} size="small" />
+                <IconButton onClick={()=>{navigator.clipboard.writeText(shareUrl)}}><ContentCopyIcon/></IconButton>
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={()=>setShareOpen(false)}>Close</Button>
+            </DialogActions>
+          </Dialog>
         </Paper>
       </Box>
     </Box>
