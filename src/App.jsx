@@ -5,8 +5,17 @@ import interactionPlugin from '@fullcalendar/interaction'
 import './App.css'
 import AuthPage from './AuthPage'
 import { auth, db } from './firebase'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc } from 'firebase/firestore'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
+import {
+  AppBar, Toolbar, Typography, IconButton, Drawer, List, ListItem, ListItemText, Button, Box, Fab, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, InputLabel, FormControl
+} from '@mui/material'
+import MenuIcon from '@mui/icons-material/Menu'
+import AddIcon from '@mui/icons-material/Add'
+import LogoutIcon from '@mui/icons-material/Logout'
+import SettingsIcon from '@mui/icons-material/Settings'
+import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
 
 const SECTIONS = ['All', 'Kitchen', 'Closet', 'Bathroom', 'Living Room', 'Bedroom', 'Other']
 
@@ -26,51 +35,71 @@ function addRecurringEvents(chore, choreIdx) {
   return events
 }
 
-function Modal({ open, onClose, chore, onSave, onDelete }) {
-  const [name, setName] = useState(chore?.name || '')
-  const [startDate, setStartDate] = useState(chore?.startDate || '')
-  const [repeat, setRepeat] = useState(chore?.repeat || '')
-  const [section, setSection] = useState(chore?.section || 'Other')
+function TaskModal({ open, onClose, onSave, initial, sections, onDelete }) {
+  const [name, setName] = useState(initial?.name || '')
+  const [startDate, setStartDate] = useState(initial?.startDate || '')
+  const [repeat, setRepeat] = useState(initial?.repeat || '')
+  const [section, setSection] = useState(initial?.section || (sections[0] || 'Other'))
 
   useEffect(() => {
-    setName(chore?.name || '')
-    setStartDate(chore?.startDate || '')
-    setRepeat(chore?.repeat || '')
-    setSection(chore?.section || 'Other')
-  }, [chore])
+    setName(initial?.name || '')
+    setStartDate(initial?.startDate || '')
+    setRepeat(initial?.repeat || '')
+    setSection(initial?.section || (sections[0] || 'Other'))
+  }, [initial, sections])
 
-  if (!open) return null
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <h2>Edit Task</h2>
-        <form onSubmit={e => { e.preventDefault(); onSave({ name, startDate, repeat, section }) }}>
-          <input type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="Task name" />
-          <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
-          <input type="number" min="0" value={repeat} onChange={e => setRepeat(e.target.value)} placeholder="Repeat (days)" />
-          <select value={section} onChange={e => setSection(e.target.value)}>
-            {SECTIONS.filter(s => s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <div className="modal-actions">
-            <button type="submit">Save</button>
-            <button type="button" className="delete" onClick={onDelete}>Delete</button>
-            <button type="button" onClick={onClose}>Close</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>{initial ? 'Edit Task' : 'Add Task'}</DialogTitle>
+      <DialogContent sx={{display:'flex', flexDirection:'column', gap:2, minWidth:300}}>
+        <TextField label="Task name" value={name} onChange={e => setName(e.target.value)} required autoFocus />
+        <TextField label="Start date" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} InputLabelProps={{shrink:true}} required />
+        <TextField label="Repeat (days)" type="number" value={repeat} onChange={e => setRepeat(e.target.value)} />
+        <FormControl fullWidth>
+          <InputLabel>Section</InputLabel>
+          <Select value={section} label="Section" onChange={e => setSection(e.target.value)}>
+            {sections.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+          </Select>
+        </FormControl>
+      </DialogContent>
+      <DialogActions>
+        {onDelete && <Button color="error" startIcon={<DeleteIcon />} onClick={onDelete}>Delete</Button>}
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" onClick={() => onSave({ name, startDate, repeat, section })}>{initial ? 'Save' : 'Add'}</Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
+function SectionDrawer({ open, onClose, sections, onAdd, onDelete }) {
+  const [newSection, setNewSection] = useState('')
+  return (
+    <Drawer anchor="left" open={open} onClose={onClose}>
+      <Box sx={{width:300, p:2}}>
+        <Typography variant="h6" sx={{mb:2}}>Manage Sections</Typography>
+        <List>
+          {sections.map(s => (
+            <ListItem key={s} secondaryAction={s!=='Other'&&<IconButton edge="end" color="error" onClick={()=>onDelete(s)}><DeleteIcon/></IconButton>}>
+              <ListItemText primary={s} />
+            </ListItem>
+          ))}
+        </List>
+        <Box sx={{display:'flex', gap:1, mt:2}}>
+          <TextField label="New section" value={newSection} onChange={e=>setNewSection(e.target.value)} fullWidth />
+          <Button variant="contained" onClick={()=>{if(newSection) {onAdd(newSection); setNewSection('')}}}>Add</Button>
+        </Box>
+      </Box>
+    </Drawer>
   )
 }
 
 export default function App() {
   const [user, setUser] = useState(null)
   const [chores, setChores] = useState([])
-  const [name, setName] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [repeat, setRepeat] = useState('')
-  const [section, setSection] = useState('Other')
+  const [sections, setSections] = useState(['Other'])
   const [modalOpen, setModalOpen] = useState(false)
-  const [selectedChoreIdx, setSelectedChoreIdx] = useState(null)
+  const [editIdx, setEditIdx] = useState(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [filterSection, setFilterSection] = useState('All')
 
@@ -82,137 +111,136 @@ export default function App() {
     return unsub
   }, [])
 
-  // Load chores from Firestore when user logs in
+  // Load chores and sections from Firestore
   useEffect(() => {
     if (!user) {
       setChores([])
+      setSections(['Other'])
       setLoading(false)
       return
     }
     setLoading(true)
-    getDoc(doc(db, 'chores', user.uid))
-      .then(snap => {
-        if (snap.exists()) setChores(snap.data().chores || [])
-        else setChores([])
-        setLoading(false)
-      })
-      .catch(() => {
-        setChores([])
-        setLoading(false)
-      })
+    Promise.all([
+      getDoc(doc(db, 'chores', user.uid)),
+      getDoc(doc(db, 'sections', user.uid))
+    ]).then(([choreSnap, sectionSnap]) => {
+      setChores(choreSnap.exists() ? choreSnap.data().chores || [] : [])
+      setSections(sectionSnap.exists() ? sectionSnap.data().sections || ['Other'] : ['Other'])
+      setLoading(false)
+    }).catch(() => {
+      setChores([])
+      setSections(['Other'])
+      setLoading(false)
+    })
     // Fallback: timeout in case Firestore hangs
     const timeout = setTimeout(() => setLoading(false), 7000)
     return () => clearTimeout(timeout)
   }, [user])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!name || !startDate || !user) return
-    const newChores = [...chores, { name, startDate, repeat, section }]
+  // Save chores
+  const saveChores = async (newChores) => {
+    if (!user) return
     await setDoc(doc(db, 'chores', user.uid), { chores: newChores }, { merge: true })
     setChores(newChores)
-    setName('')
-    setStartDate('')
-    setRepeat('')
-    setSection('Other')
+  }
+  // Save sections
+  const saveSections = async (newSections) => {
+    if (!user) return
+    await setDoc(doc(db, 'sections', user.uid), { sections: newSections }, { merge: true })
+    setSections(newSections)
   }
 
-  const events = chores
-    .filter(chore => filterSection === 'All' || chore.section === filterSection)
-    .flatMap((chore, idx) => addRecurringEvents(chore, idx))
-
-  const handleEventClick = (info) => {
-    setSelectedChoreIdx(info.event.extendedProps.choreIdx)
-    setModalOpen(true)
-  }
-
-  const handleModalSave = async (updated) => {
-    if (selectedChoreIdx == null || !user) return
-    const newChores = chores.map((c, i) => i === selectedChoreIdx ? { ...c, ...updated } : c)
-    await setDoc(doc(db, 'chores', user.uid), { chores: newChores }, { merge: true })
-    setChores(newChores)
+  // Task handlers
+  const handleAddTask = async (task) => {
+    await saveChores([...chores, task])
     setModalOpen(false)
   }
-  const handleModalDelete = async () => {
-    if (selectedChoreIdx == null || !user) return
-    const newChores = chores.filter((_, i) => i !== selectedChoreIdx)
-    await setDoc(doc(db, 'chores', user.uid), { chores: newChores }, { merge: true })
-    setChores(newChores)
+  const handleEditTask = async (task) => {
+    if (editIdx == null) return
+    const newChores = chores.map((c, i) => i === editIdx ? { ...c, ...task } : c)
+    await saveChores(newChores)
+    setEditIdx(null)
     setModalOpen(false)
   }
+  const handleDeleteTask = async () => {
+    if (editIdx == null) return
+    const newChores = chores.filter((_, i) => i !== editIdx)
+    await saveChores(newChores)
+    setEditIdx(null)
+    setModalOpen(false)
+  }
+
+  // Section handlers
+  const handleAddSection = async (section) => {
+    if (!sections.includes(section)) await saveSections([...sections, section])
+  }
+  const handleDeleteSection = async (section) => {
+    if (section === 'Other') return
+    const newSections = sections.filter(s => s !== section)
+    await saveSections(newSections)
+    // Remove section from tasks
+    const newChores = chores.map(c => c.section === section ? { ...c, section: 'Other' } : c)
+    await saveChores(newChores)
+  }
+
+  const filteredChores = filterSection === 'All' ? chores : chores.filter(c => c.section === filterSection)
+  const events = filteredChores.flatMap((chore, idx) => addRecurringEvents(chore, idx))
 
   if (!user) return <AuthPage onAuth={setUser} />
 
   return (
-    <div className="container">
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <h1>Home Chores Calendar</h1>
-        <button onClick={() => signOut(auth)} style={{height:36, background:'#e11d48', color:'#fff', border:'none', borderRadius:6, fontWeight:'bold', cursor:'pointer'}}>Logout</button>
-      </div>
-      {loading ? <div>Loading...</div> : <>
-      <form className="chore-form" onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Task name (e.g. Vacuum the house)"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          required
+    <Box sx={{bgcolor:'#f5f7fa', minHeight:'100vh'}}>
+      <AppBar position="static" color="primary" sx={{mb:3}}>
+        <Toolbar>
+          <IconButton color="inherit" edge="start" onClick={()=>setDrawerOpen(true)}><MenuIcon/></IconButton>
+          <Typography variant="h6" sx={{flexGrow:1}}>Home Chores</Typography>
+          <Button color="inherit" startIcon={<LogoutIcon/>} onClick={()=>signOut(auth)}>Logout</Button>
+        </Toolbar>
+      </AppBar>
+      <SectionDrawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} sections={sections} onAdd={handleAddSection} onDelete={handleDeleteSection} />
+      <Box sx={{maxWidth:900, mx:'auto', p:2}}>
+        <Box sx={{display:'flex', alignItems:'center', gap:2, mb:2}}>
+          <FormControl>
+            <InputLabel>Filter by section</InputLabel>
+            <Select value={filterSection} label="Filter by section" onChange={e=>setFilterSection(e.target.value)} sx={{minWidth:160}}>
+              <MenuItem value="All">All</MenuItem>
+              {sections.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <Button variant="outlined" startIcon={<SettingsIcon/>} onClick={()=>setDrawerOpen(true)}>Manage Sections</Button>
+        </Box>
+        <FullCalendar
+          plugins={[dayGridPlugin, interactionPlugin]}
+          initialView="dayGridWeek"
+          locale="en"
+          events={events}
+          height="auto"
+          headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,dayGridWeek,dayGridDay' }}
+          eventClick={info => { setEditIdx(info.event.extendedProps.choreIdx); setModalOpen(true); }}
         />
-        <input
-          type="date"
-          value={startDate}
-          onChange={e => setStartDate(e.target.value)}
-          required
+        <Box sx={{mt:3}}>
+          <Typography variant="h5" sx={{mb:1}}>Tasks</Typography>
+          <List>
+            {filteredChores.length === 0 && <ListItem><ListItemText primary="No tasks added yet." /></ListItem>}
+            {filteredChores.map((chore, i) => (
+              <ListItem key={i} secondaryAction={<IconButton edge="end" onClick={()=>{setEditIdx(i); setModalOpen(true);}}><EditIcon/></IconButton>}>
+                <ListItemText primary={`${chore.name} - ${chore.startDate} ${chore.repeat ? `- Every ${chore.repeat} days` : ''} [${chore.section}]`} />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+        <Fab color="primary" aria-label="add" sx={{position:'fixed', bottom:32, right:32}} onClick={()=>{setEditIdx(null); setModalOpen(true);}}>
+          <AddIcon />
+        </Fab>
+        <TaskModal
+          open={modalOpen}
+          onClose={()=>{setModalOpen(false); setEditIdx(null);}}
+          onSave={editIdx==null?handleAddTask:handleEditTask}
+          initial={editIdx==null?null:filteredChores[editIdx]}
+          sections={sections}
+          onDelete={editIdx!=null?handleDeleteTask:undefined}
         />
-        <input
-          type="number"
-          min="0"
-          placeholder="Repeat (days) - e.g. 3"
-          value={repeat}
-          onChange={e => setRepeat(e.target.value)}
-        />
-        <select value={section} onChange={e => setSection(e.target.value)}>
-          {SECTIONS.filter(s => s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <button type="submit">Add</button>
-      </form>
-      <div style={{marginBottom:16}}>
-        <label style={{marginRight:8}}>Filter by section:</label>
-        <select value={filterSection} onChange={e => setFilterSection(e.target.value)}>
-          {SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </div>
-      <FullCalendar
-        plugins={[dayGridPlugin, interactionPlugin]}
-        initialView="dayGridWeek"
-        locale="en"
-        events={events}
-        height="auto"
-        headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,dayGridWeek,dayGridDay' }}
-        eventClick={handleEventClick}
-      />
-      <div style={{marginTop: 24}}>
-        <h2>Tasks</h2>
-        <ul>
-          {chores.length === 0 && <li>No tasks added yet.</li>}
-          {chores.filter(chore => filterSection === 'All' || chore.section === filterSection).map((chore, i) => (
-            <li key={i}>
-              {chore.name} - {chore.startDate} {chore.repeat ? `- Every ${chore.repeat} days` : ''} [{chore.section}]
-              <button style={{marginLeft:8}} onClick={() => {
-                setSelectedChoreIdx(i); setModalOpen(true);
-              }}>Edit</button>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <Modal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        chore={selectedChoreIdx !== null ? chores[selectedChoreIdx] : null}
-        onSave={handleModalSave}
-        onDelete={handleModalDelete}
-      />
-      </>}
-    </div>
+      </Box>
+    </Box>
   )
 }
