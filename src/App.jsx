@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -26,18 +26,20 @@ const SECTIONS = ['All', 'Kitchen', 'Closet', 'Bathroom', 'Living Room', 'Bedroo
 
 function addRecurringEvents(chore, choreIdx) {
   const events = []
-  const { name, dateTime, repeat, section, done } = chore
+  const { name, dateTime, repeat, section, doneDates = [] } = chore
   if (!dateTime) return events
   const repeatNum = parseInt(repeat)
   let date = new Date(dateTime)
   const today = new Date()
   // 1 yıl ileriye kadar göster
   while (date <= new Date(today.getFullYear(), today.getMonth() + 6, today.getDate())) {
+    const iso = date.toISOString()
+    const isDone = doneDates.includes(iso)
     events.push({
       title: name,
-      date: date.toISOString(),
-      extendedProps: { choreIdx, section, done, dateTime: date.toISOString() },
-      color: done ? '#b2f2bb' : (isPast(date) && !done ? '#ffb3b3' : undefined)
+      date: iso,
+      extendedProps: { choreIdx, section, isDone, dateTime: iso },
+      color: isDone ? '#b2f2bb' : (isPast(date) && !isDone ? '#ffb3b3' : undefined)
     })
     if (!repeatNum) break
     date.setDate(date.getDate() + repeatNum)
@@ -50,14 +52,12 @@ function TaskModal({ open, onClose, onSave, initial, sections, onDelete }) {
   const [dateTime, setDateTime] = useState(initial?.dateTime ? new Date(initial.dateTime) : new Date())
   const [repeat, setRepeat] = useState(initial?.repeat || '')
   const [section, setSection] = useState(initial?.section || (sections[0] || 'Other'))
-  const [done, setDone] = useState(initial?.done || false)
 
   useEffect(() => {
     setName(initial?.name || '')
     setDateTime(initial?.dateTime ? new Date(initial.dateTime) : new Date())
     setRepeat(initial?.repeat || '')
     setSection(initial?.section || (sections[0] || 'Other'))
-    setDone(initial?.done || false)
   }, [initial, sections])
 
   return (
@@ -80,17 +80,11 @@ function TaskModal({ open, onClose, onSave, initial, sections, onDelete }) {
             {sections.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </Select>
         </FormControl>
-        <FormControl>
-          <Box sx={{display:'flex', alignItems:'center', gap:1}}>
-            <Checkbox checked={done} onChange={e => setDone(e.target.checked)} />
-            <Typography>Done</Typography>
-          </Box>
-        </FormControl>
       </DialogContent>
       <DialogActions>
         {onDelete && <Button color="error" startIcon={<DeleteIcon />} onClick={onDelete}>Delete</Button>}
         <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={() => onSave({ name, dateTime: dateTime.toISOString(), repeat, section, done })}>{initial ? 'Save' : 'Add'}</Button>
+        <Button variant="contained" onClick={() => onSave({ name, dateTime: dateTime.toISOString(), repeat, section })}>{initial ? 'Save' : 'Add'}</Button>
       </DialogActions>
     </Dialog>
   )
@@ -130,6 +124,7 @@ export default function App() {
   const [filterSection, setFilterSection] = useState('All')
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [modalInitial, setModalInitial] = useState(null)
+  const [quickAddDate, setQuickAddDate] = useState(null)
 
   // Auth state
   useEffect(() => {
@@ -180,8 +175,9 @@ export default function App() {
 
   // Task handlers
   const handleAddTask = async (task) => {
-    await saveChores([...chores, task])
+    await saveChores([...chores, { ...task, doneDates: [] }])
     setModalOpen(false)
+    setQuickAddDate(null)
   }
   const handleEditTask = async (task) => {
     if (editIdx == null) return
@@ -189,6 +185,7 @@ export default function App() {
     await saveChores(newChores)
     setEditIdx(null)
     setModalOpen(false)
+    setQuickAddDate(null)
   }
   const handleDeleteTask = async () => {
     if (editIdx == null) return
@@ -196,9 +193,18 @@ export default function App() {
     await saveChores(newChores)
     setEditIdx(null)
     setModalOpen(false)
+    setQuickAddDate(null)
   }
-  const handleToggleDone = async (idx) => {
-    const newChores = chores.map((c, i) => i === idx ? { ...c, done: !c.done } : c)
+
+  // Mark a specific occurrence as done/undone
+  const handleToggleDone = async (taskIdx, isoDate) => {
+    const newChores = chores.map((c, i) => {
+      if (i !== taskIdx) return c
+      const doneDates = c.doneDates || []
+      const idx = doneDates.indexOf(isoDate)
+      if (idx === -1) return { ...c, doneDates: [...doneDates, isoDate] }
+      else return { ...c, doneDates: doneDates.filter(d => d !== isoDate) }
+    })
     await saveChores(newChores)
   }
 
@@ -215,14 +221,40 @@ export default function App() {
     await saveChores(newChores)
   }
 
+  // Keyboard shortcut for 'c' to open add task modal
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'c' && !modalOpen && !sectionModalOpen) {
+        setEditIdx(null)
+        setModalInitial(null)
+        setModalOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [modalOpen, sectionModalOpen])
+
   const filteredChores = filterSection === 'All' ? chores : chores.filter(c => c.section === filterSection)
   const events = filteredChores.flatMap((chore, idx) => addRecurringEvents(chore, idx))
 
   // Checklist panel: show all tasks for today, sorted by time
   const todayStr = format(new Date(), 'yyyy-MM-dd')
   const todayTasks = chores
-    .filter(task => task.dateTime && format(new Date(task.dateTime), 'yyyy-MM-dd') === todayStr)
-    .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+    .flatMap((task, idx) => {
+      // For recurring, generate all occurrences for today
+      const occurrences = []
+      let date = new Date(task.dateTime)
+      const repeatNum = parseInt(task.repeat)
+      while (format(date, 'yyyy-MM-dd') <= todayStr) {
+        if (format(date, 'yyyy-MM-dd') === todayStr) {
+          occurrences.push({ ...task, occurrenceDate: date.toISOString(), taskIdx: idx })
+        }
+        if (!repeatNum) break
+        date.setDate(date.getDate() + repeatNum)
+      }
+      return occurrences
+    })
+    .sort((a, b) => new Date(a.occurrenceDate) - new Date(b.occurrenceDate))
 
   if (!user) return <AuthPage onAuth={setUser} />
 
@@ -235,19 +267,20 @@ export default function App() {
           <List>
             {todayTasks.length === 0 && <ListItem><ListItemText primary="No tasks for today." /></ListItem>}
             {todayTasks.map((task, idx) => {
-              const isOverdue = isPast(new Date(task.dateTime)) && !task.done
+              const isOverdue = isPast(new Date(task.occurrenceDate)) && !(task.doneDates||[]).includes(task.occurrenceDate)
+              const isDone = (task.doneDates||[]).includes(task.occurrenceDate)
               return (
-                <ListItem key={idx} sx={{borderRadius:2, mb:1, bgcolor: task.done ? '#e6ffed' : (isOverdue ? '#ffeaea' : '#fff')}}
+                <ListItem key={idx} sx={{borderRadius:2, mb:1, bgcolor: isDone ? '#e6ffed' : (isOverdue ? '#ffeaea' : '#fff')}}
                   secondaryAction={
-                    <IconButton edge="end" onClick={()=>{setEditIdx(chores.indexOf(task)); setModalInitial(task); setModalOpen(true);}}>
+                    <IconButton edge="end" onClick={()=>{setEditIdx(task.taskIdx); setModalInitial(task); setModalOpen(true);}}>
                       <EditIcon/>
                     </IconButton>
                   }
                 >
-                  <Checkbox checked={task.done} onChange={()=>handleToggleDone(chores.indexOf(task))} icon={<RadioButtonUncheckedIcon/>} checkedIcon={<CheckCircleIcon/>} />
+                  <Checkbox checked={isDone} onChange={()=>handleToggleDone(task.taskIdx, task.occurrenceDate)} icon={<RadioButtonUncheckedIcon/>} checkedIcon={<CheckCircleIcon/>} />
                   <ListItemText
-                    primary={<span style={{textDecoration: task.done ? 'line-through' : undefined, color: isOverdue ? '#d32f2f' : undefined}}>{task.name}</span>}
-                    secondary={format(new Date(task.dateTime), 'HH:mm') + (task.section ? ` • ${task.section}` : '')}
+                    primary={<span style={{textDecoration: isDone ? 'line-through' : undefined, color: isOverdue ? '#d32f2f' : undefined}}>{task.name}</span>}
+                    secondary={format(new Date(task.occurrenceDate), 'HH:mm') + (task.section ? ` • ${task.section}` : '')}
                   />
                 </ListItem>
               )
@@ -291,6 +324,7 @@ export default function App() {
                 setModalInitial({ dateTime: info.dateStr })
                 setModalOpen(true)
               }}
+              eventContent={renderEventContent}
             />
           </LocalizationProvider>
           <Box sx={{mt:3}}>
@@ -298,17 +332,27 @@ export default function App() {
             <List>
               {filteredChores.length === 0 && <ListItem><ListItemText primary="No tasks added yet." /></ListItem>}
               {filteredChores.map((chore, i) => {
-                const isOverdue = isPast(new Date(chore.dateTime)) && !chore.done
+                // For recurring, show the next occurrence
+                const nextDate = new Date(chore.dateTime)
+                const repeatNum = parseInt(chore.repeat)
+                let occurrence = nextDate
+                while (isPast(occurrence) && repeatNum) {
+                  occurrence = new Date(occurrence)
+                  occurrence.setDate(occurrence.getDate() + repeatNum)
+                }
+                const iso = occurrence.toISOString()
+                const isDone = (chore.doneDates||[]).includes(iso)
+                const isOverdue = isPast(occurrence) && !isDone
                 return (
-                  <ListItem key={i} sx={{borderRadius:2, mb:1, bgcolor: chore.done ? '#e6ffed' : (isOverdue ? '#ffeaea' : '#fff')}}
+                  <ListItem key={i} sx={{borderRadius:2, mb:1, bgcolor: isDone ? '#e6ffed' : (isOverdue ? '#ffeaea' : '#fff')}}
                     secondaryAction={
                       <IconButton edge="end" onClick={()=>{setEditIdx(i); setModalInitial(chore); setModalOpen(true);}}><EditIcon/></IconButton>
                     }
                   >
-                    <Checkbox checked={chore.done} onChange={()=>handleToggleDone(i)} icon={<RadioButtonUncheckedIcon/>} checkedIcon={<CheckCircleIcon/>} />
+                    <Checkbox checked={isDone} onChange={()=>handleToggleDone(i, iso)} icon={<RadioButtonUncheckedIcon/>} checkedIcon={<CheckCircleIcon/>} />
                     <ListItemText
-                      primary={<span style={{textDecoration: chore.done ? 'line-through' : undefined, color: isOverdue ? '#d32f2f' : undefined}}>{chore.name}</span>}
-                      secondary={format(new Date(chore.dateTime), 'yyyy-MM-dd HH:mm') + (chore.section ? ` • ${chore.section}` : '')}
+                      primary={<span style={{textDecoration: isDone ? 'line-through' : undefined, color: isOverdue ? '#d32f2f' : undefined}}>{chore.name}</span>}
+                      secondary={format(occurrence, 'yyyy-MM-dd HH:mm') + (chore.section ? ` • ${chore.section}` : '')}
                     />
                   </ListItem>
                 )
@@ -317,7 +361,7 @@ export default function App() {
           </Box>
           <TaskModal
             open={modalOpen}
-            onClose={()=>{setModalOpen(false); setEditIdx(null); setModalInitial(null);}}
+            onClose={()=>{setModalOpen(false); setEditIdx(null); setModalInitial(null); setQuickAddDate(null);}}
             onSave={editIdx==null?handleAddTask:handleEditTask}
             initial={modalInitial}
             sections={sections}
@@ -332,6 +376,18 @@ export default function App() {
           />
         </Paper>
       </Box>
+    </Box>
+  )
+}
+
+// Custom event content for calendar: show done/overdue
+function renderEventContent(arg) {
+  const isDone = arg.event.extendedProps.isDone
+  const isOverdue = isPast(new Date(arg.event.start)) && !isDone
+  return (
+    <Box sx={{display:'flex', alignItems:'center', gap:1}}>
+      <Checkbox checked={isDone} icon={<RadioButtonUncheckedIcon fontSize="small"/>} checkedIcon={<CheckCircleIcon fontSize="small"/>} sx={{p:0, mr:0.5}} disabled />
+      <span style={{textDecoration: isDone ? 'line-through' : undefined, color: isOverdue ? '#d32f2f' : undefined}}>{arg.event.title}</span>
     </Box>
   )
 }
