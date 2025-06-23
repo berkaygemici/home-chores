@@ -22,6 +22,8 @@ import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { format, isBefore, isToday, isPast } from 'date-fns'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
+import HomeIcon from '@mui/icons-material/Home'
 
 const SECTIONS = ['All', 'Kitchen', 'Closet', 'Bathroom', 'Living Room', 'Bedroom', 'Other']
 
@@ -181,6 +183,7 @@ function SectionModal({ open, onClose, sections, onAdd, onDelete }) {
 
 export default function App() {
   const [user, setUser] = useState(null)
+  const [mode, setMode] = useState(null) // 'chores' or 'tasks'
   const [chores, setChores] = useState([])
   const [sections, setSections] = useState(['Other'])
   const [modalOpen, setModalOpen] = useState(false)
@@ -341,6 +344,231 @@ export default function App() {
     .sort((a, b) => new Date(a.occurrenceDate) - new Date(b.occurrenceDate))
 
   if (!user) return <AuthPage onAuth={setUser} />
+
+  // New: Mode selection after login
+  if (!mode) {
+    return (
+      <Box sx={{
+        minHeight: '100vh',
+        width: '100vw',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(120deg, #e0e7ff 0%, #f5f7fa 60%, #e3f0ff 100%)',
+        fontFamily: 'Inter, system-ui, sans-serif',
+      }}>
+        <Box sx={{
+          p: { xs: 3, sm: 5 },
+          borderRadius: 5,
+          boxShadow: '0 12px 36px #2563eb33, 0 1.5px 8px #2563eb11',
+          bgcolor: '#fff',
+          minWidth: { xs: 300, sm: 380 },
+          maxWidth: 420,
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 2,
+        }}>
+          <Box sx={{
+            bgcolor: 'linear-gradient(135deg, #2563eb 60%, #60a5fa 100%)',
+            background: 'linear-gradient(135deg, #2563eb 60%, #60a5fa 100%)',
+            borderRadius: '50%',
+            width: 64,
+            height: 64,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            mb: 1.5,
+            boxShadow: '0 4px 16px #2563eb22',
+          }}>
+            <RocketLaunchIcon sx={{ color: '#fff', fontSize: 38 }} />
+          </Box>
+          <h2 style={{ fontWeight: 800, color: '#2563eb', margin: 0, fontSize: '2rem', letterSpacing: '-1px' }}>Welcome!</h2>
+          <div style={{ color: '#64748b', fontSize: '1.08rem', marginBottom: 8, fontWeight: 500 }}>Your productivity hub</div>
+          <div style={{ color: '#334155', fontSize: '1.13rem', marginBottom: 24 }}>Choose your workspace:</div>
+          <Button
+            variant="contained"
+            sx={{
+              mb: 2,
+              borderRadius: 99,
+              fontWeight: 700,
+              width: '100%',
+              fontSize: '1.08rem',
+              boxShadow: '0 2px 8px #2563eb22',
+              background: 'linear-gradient(90deg, #2563eb 60%, #60a5fa 100%)',
+              transition: 'background 0.2s, box-shadow 0.2s',
+              '&:hover': {
+                background: 'linear-gradient(90deg, #1d4ed8 60%, #60a5fa 100%)',
+                boxShadow: '0 4px 16px #2563eb33',
+              },
+            }}
+            onClick={() => setMode('chores')}
+          >
+            CHORESMASTER
+          </Button>
+          <Button
+            variant="outlined"
+            sx={{
+              borderRadius: 99,
+              fontWeight: 700,
+              width: '100%',
+              fontSize: '1.08rem',
+              color: '#2563eb',
+              borderColor: '#2563eb',
+              background: 'rgba(99, 102, 241, 0.04)',
+              transition: 'background 0.2s, border 0.2s',
+              '&:hover': {
+                background: 'rgba(99, 102, 241, 0.10)',
+                borderColor: '#1d4ed8',
+              },
+            }}
+            onClick={() => setMode('tasks')}
+          >
+            TASKMASTER (JIRA)
+          </Button>
+        </Box>
+      </Box>
+    )
+  }
+
+  if (mode === 'tasks') {
+    // Placeholder for TaskMaster (Jira Clone)
+    return (
+      <Box sx={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', bgcolor:'#f5f7fa'}}>
+        <Box sx={{p:4, borderRadius:4, boxShadow:'0 8px 32px #2563eb22', bgcolor:'#fff', minWidth:320, textAlign:'center'}}>
+          <h2 style={{fontWeight:700, color:'#2563eb'}}>TaskMaster</h2>
+          <p>Jira Clone coming soon...</p>
+          <Button variant="outlined" sx={{borderRadius:99, fontWeight:600, mt:2}} onClick={()=>setMode(null)}>Back</Button>
+        </Box>
+      </Box>
+    )
+  }
+
+  if (mode === 'chores') {
+    // Render ChoresMaster with Home button inside sidebar
+    return (
+      <Box sx={{bgcolor:'linear-gradient(120deg, #f5f7fa 60%, #e3f0ff 100%)', minHeight:'100vh', fontFamily:'Inter, system-ui, sans-serif', display:'flex'}}>
+        {/* Checklist Sidebar */}
+        <Drawer variant="permanent" open anchor="left" PaperProps={{sx:{width:320, bgcolor:'#f8fafc', borderRight:'1px solid #e0e7ef', p:2}}}>
+          <Box sx={{p:2, pb:0}}>
+            <Button
+              variant="outlined"
+              startIcon={<HomeIcon />}
+              sx={{borderRadius:99, fontWeight:600, bgcolor:'#fff', boxShadow:'0 2px 8px #2563eb22', mb:2, width:'100%', '&:hover':{bgcolor:'#f1f5fa'}}}
+              onClick={()=>setMode(null)}
+            >
+              Home
+            </Button>
+            <Typography variant="h6" sx={{mb:2, fontWeight:700}}>Today's Checklist</Typography>
+            <List>
+              {todayTasks.length === 0 && <ListItem><ListItemText primary="No tasks for today." /></ListItem>}
+              {todayTasks.map((task, idx) => {
+                const isOverdue = isPast(new Date(task.occurrenceDate)) && !(task.doneDates||[]).includes(task.occurrenceDate)
+                const isDone = (task.doneDates||[]).includes(task.occurrenceDate)
+                return (
+                  <ListItem key={idx} sx={{borderRadius:2, mb:1, bgcolor: isDone ? '#e6ffed' : (isOverdue ? '#ffeaea' : '#fff')}}
+                    secondaryAction={
+                      <IconButton edge="end" onClick={()=>{setEditIdx(task.taskIdx); setModalInitial(task); setModalOpen(true);}}>
+                        <EditIcon/>
+                      </IconButton>
+                    }
+                  >
+                    <Checkbox checked={isDone} onChange={()=>handleToggleDone(task.taskIdx, task.occurrenceDate)} icon={<RadioButtonUncheckedIcon/>} checkedIcon={<CheckCircleIcon/>} />
+                    <ListItemText
+                      primary={<span style={{textDecoration: isDone ? 'line-through' : undefined, color: isOverdue ? '#d32f2f' : undefined}}>{task.name}</span>}
+                      secondary={format(new Date(task.occurrenceDate), 'HH:mm') + (task.section ? ` • ${task.section}` : '')}
+                    />
+                  </ListItem>
+                )
+              })}
+            </List>
+          </Box>
+          <Divider sx={{my:2}}/>
+          <Button variant="contained" color="primary" startIcon={<SettingsIcon/>} onClick={()=>setSectionModalOpen(true)} sx={{borderRadius:99, fontWeight:600, mx:2}}>Manage Sections</Button>
+          <Button variant="outlined" color="primary" startIcon={<ContentCopyIcon/>} onClick={()=>setShareOpen(true)} sx={{borderRadius:99, fontWeight:600, mx:2, mt:1}}>Share Calendar</Button>
+          <Button variant="outlined" color="error" startIcon={<LogoutIcon/>} onClick={()=>signOut(auth)} sx={{borderRadius:99, fontWeight:600, mx:2, mt:1}}>Logout</Button>
+        </Drawer>
+        {/* Main Content */}
+        <Box sx={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-start', minHeight:'100vh', p:{xs:1,sm:4}}}>
+          <Paper elevation={4} sx={{maxWidth: 900, width:'100%', mx:'auto', my:6, p:{xs:2,sm:4}, borderRadius:5, boxShadow: '0 8px 32px #2563eb22'}}>
+            <Box sx={{display:'flex', flexDirection:{xs:'column',sm:'row'}, alignItems:{sm:'center'}, justifyContent:'space-between', gap:2, mb:3}}>
+              <FormControl sx={{minWidth:180}} size="small">
+                <InputLabel>Filter by section</InputLabel>
+                <Select value={filterSection} label="Filter by section" onChange={e=>setFilterSection(e.target.value)}>
+                  <MenuItem value="All">All</MenuItem>
+                  {sections.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <Fab color="primary" aria-label="add" sx={{ml:2}} onClick={()=>{setEditIdx(null); setModalInitial(null); setModalOpen(true);}}>
+                <AddIcon />
+              </Fab>
+            </Box>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <FullCalendar
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                initialView="timeGridWeek"
+                locale="en"
+                events={events}
+                height="auto"
+                headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }}
+                nowIndicator={true}
+                eventClick={info => {
+                  // If click is on the checkbox, mark as done/undone
+                  const box = info.jsEvent.target.closest('.fc-checkbox')
+                  if (box) {
+                    const { choreIdx, dateTime } = info.event.extendedProps
+                    handleToggleDone(choreIdx, dateTime)
+                    return
+                  }
+                  setEditIdx(info.event.extendedProps.choreIdx)
+                  setModalInitial(filteredChores[info.event.extendedProps.choreIdx])
+                  setModalOpen(true)
+                }}
+                dateClick={info => {
+                  setEditIdx(null)
+                  setModalInitial({ dateTime: info.dateStr })
+                  setModalOpen(true)
+                }}
+                eventContent={renderEventContent}
+                eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+                slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+              />
+            </LocalizationProvider>
+            <TaskModal
+              open={modalOpen}
+              onClose={()=>{setModalOpen(false); setEditIdx(null); setModalInitial(null); setQuickAddDate(null);}}
+              onSave={editIdx==null?handleAddTask:handleEditTask}
+              initial={modalInitial}
+              occurrenceDate={modalInitial?.occurrenceDate || modalInitial?.dateTime}
+              sections={sections}
+              onDelete={editIdx!=null?handleDeleteTask:undefined}
+            />
+            <SectionModal
+              open={sectionModalOpen}
+              onClose={()=>setSectionModalOpen(false)}
+              sections={sections}
+              onAdd={handleAddSection}
+              onDelete={handleDeleteSection}
+            />
+            <Dialog open={shareOpen} onClose={()=>setShareOpen(false)}>
+              <DialogTitle>Share Calendar</DialogTitle>
+              <DialogContent>
+                <Typography>Anyone with this link can view your calendar (read-only):</Typography>
+                <Box sx={{display:'flex', alignItems:'center', mt:2}}>
+                  <TextField value={shareUrl} fullWidth InputProps={{readOnly:true}} size="small" />
+                  <IconButton onClick={()=>{navigator.clipboard.writeText(shareUrl)}}><ContentCopyIcon/></IconButton>
+                </Box>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={()=>setShareOpen(false)}>Close</Button>
+              </DialogActions>
+            </Dialog>
+          </Paper>
+        </Box>
+      </Box>
+    )
+  }
 
   return (
     <Box sx={{bgcolor:'linear-gradient(120deg, #f5f7fa 60%, #e3f0ff 100%)', minHeight:'100vh', fontFamily:'Inter, system-ui, sans-serif', display:'flex'}}>
