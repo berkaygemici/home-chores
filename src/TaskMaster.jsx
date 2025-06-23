@@ -3,14 +3,37 @@ import { db } from './firebase'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import {
   Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, 
-  Typography, Paper, IconButton, Chip, Grid, Card, CardContent, Stack
+  Typography, Paper, IconButton, Chip, Grid, Card, CardContent, Stack, Avatar,
+  Menu, MenuItem, Divider, Container, useTheme, useMediaQuery
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import FolderIcon from '@mui/icons-material/Folder'
 import ViewKanbanIcon from '@mui/icons-material/ViewKanban'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
+import EditIcon from '@mui/icons-material/Edit'
+import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import RestoreIcon from '@mui/icons-material/Restore'
+import CloseIcon from '@mui/icons-material/Close'
 import { format } from 'date-fns'
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 // Project Modal Component
 function ProjectModal({ open, onClose, onSave }) {
@@ -130,13 +153,347 @@ function TaskModal({ open, onClose, onSave, initial }) {
   )
 }
 
+// Task Detail Modal Component (Jira-inspired)
+function TaskDetailModal({ task, open, onClose, onUpdate, onDelete, onStatusChange }) {
+  const [editing, setEditing] = useState(false)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [anchorEl, setAnchorEl] = useState(null)
+
+  useEffect(() => {
+    if (task) {
+      setTitle(task.title || '')
+      setDescription(task.description || '')
+    }
+  }, [task])
+
+  const handleSave = () => {
+    onUpdate({ title: title.trim(), description: description.trim() })
+    setEditing(false)
+  }
+
+  const handleStatusChange = (newStatus) => {
+    onStatusChange(task.id, newStatus)
+    setAnchorEl(null)
+  }
+
+  const handleMenuClick = (event) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  if (!task) return null
+
+  return (
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: { borderRadius: 3, minHeight: '70vh' }
+      }}
+    >
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        borderBottom: '1px solid #e0e7ff',
+        pb: 2
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Avatar sx={{ bgcolor: '#2563eb', width: 32, height: 32 }}>
+            {task.title?.charAt(0)?.toUpperCase()}
+          </Avatar>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Task Details
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <IconButton onClick={handleMenuClick}>
+            <MoreVertIcon />
+          </IconButton>
+          <IconButton onClick={onClose}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      </DialogTitle>
+
+      <DialogContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* Title Section */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ color: '#64748b', mb: 1, fontWeight: 600 }}>
+              Title
+            </Typography>
+            {editing ? (
+              <TextField
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                fullWidth
+                variant="outlined"
+                autoFocus
+              />
+            ) : (
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600, 
+                  cursor: 'pointer',
+                  p: 1.5,
+                  borderRadius: 2,
+                  '&:hover': { bgcolor: '#f8fafc' }
+                }}
+                onClick={() => setEditing(true)}
+              >
+                {task.title}
+              </Typography>
+            )}
+          </Box>
+
+          {/* Status Section */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ color: '#64748b', mb: 1, fontWeight: 600 }}>
+              Status
+            </Typography>
+            <Chip
+              label={task.status === 'todo' ? 'TO DO' : task.status === 'inprogress' ? 'IN PROGRESS' : 'DONE'}
+              sx={{
+                bgcolor: task.status === 'todo' ? '#fef3c7' : task.status === 'inprogress' ? '#dbeafe' : '#d1fae5',
+                color: task.status === 'todo' ? '#92400e' : task.status === 'inprogress' ? '#1e40af' : '#065f46',
+                fontWeight: 600
+              }}
+            />
+          </Box>
+
+          {/* Description Section */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ color: '#64748b', mb: 1, fontWeight: 600 }}>
+              Description
+            </Typography>
+            {editing ? (
+              <TextField
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                fullWidth
+                multiline
+                rows={4}
+                variant="outlined"
+                placeholder="Add a description..."
+              />
+            ) : (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: '#f8fafc',
+                  cursor: 'pointer',
+                  minHeight: 80,
+                  '&:hover': { bgcolor: '#f1f5f9' }
+                }}
+                onClick={() => setEditing(true)}
+              >
+                <Typography sx={{ color: description ? '#334155' : '#94a3b8' }}>
+                  {description || 'Click to add a description...'}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          {/* Created Date */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ color: '#64748b', mb: 1, fontWeight: 600 }}>
+              Created
+            </Typography>
+            <Typography sx={{ color: '#64748b' }}>
+              {format(new Date(task.createdAt), 'MMM dd, yyyy • HH:mm')}
+            </Typography>
+          </Box>
+        </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ px: 3, pb: 3, pt: 1, gap: 1 }}>
+        {editing ? (
+          <>
+            <Button onClick={() => setEditing(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleSave}>Save Changes</Button>
+          </>
+        ) : (
+          <>
+            <Button 
+              variant="outlined" 
+              color="error" 
+              onClick={() => {
+                if (window.confirm('Delete this task?')) {
+                  onDelete(task.id)
+                  onClose()
+                }
+              }}
+            >
+              Delete
+            </Button>
+            <Button variant="outlined" onClick={() => setEditing(true)}>
+              Edit
+            </Button>
+          </>
+        )}
+      </DialogActions>
+
+      {/* Action Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+      >
+        <MenuItem onClick={() => handleStatusChange('todo')}>
+          <RestoreIcon sx={{ mr: 1 }} />
+          Move to TO DO
+        </MenuItem>
+        <MenuItem onClick={() => handleStatusChange('inprogress')}>
+          <PlayArrowIcon sx={{ mr: 1 }} />
+          Move to IN PROGRESS
+        </MenuItem>
+        <MenuItem onClick={() => handleStatusChange('done')}>
+          <CheckCircleIcon sx={{ mr: 1 }} />
+          Move to DONE
+        </MenuItem>
+        <Divider />
+        <MenuItem 
+          onClick={() => {
+            if (window.confirm('Delete this task?')) {
+              onDelete(task.id)
+              onClose()
+            }
+            setAnchorEl(null)
+          }}
+          sx={{ color: 'error.main' }}
+        >
+          <DeleteIcon sx={{ mr: 1 }} />
+          Delete Task
+        </MenuItem>
+      </Menu>
+    </Dialog>
+  )
+}
+
+// Draggable Task Card Component
+function TaskCard({ task, onClick }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: task.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1
+  }
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      sx={{
+        mb: 1.5,
+        cursor: 'pointer',
+        borderRadius: 2,
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        '&:hover': {
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          transform: 'translateY(-2px)'
+        },
+        transition: 'all 0.2s ease'
+      }}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+    >
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Typography 
+          variant="subtitle2" 
+          sx={{ 
+            fontWeight: 600, 
+            mb: 1,
+            textDecoration: task.status === 'done' ? 'line-through' : 'none',
+            color: task.status === 'done' ? '#64748b' : '#1e293b'
+          }}
+        >
+          {task.title}
+        </Typography>
+        {task.description && (
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: '#64748b', 
+              mb: 1.5,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden'
+            }}
+          >
+            {task.description}
+          </Typography>
+        )}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Avatar sx={{ width: 24, height: 24, bgcolor: '#2563eb', fontSize: '0.75rem' }}>
+            {task.title?.charAt(0)?.toUpperCase()}
+          </Avatar>
+          <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+            {format(new Date(task.createdAt), 'MMM dd')}
+          </Typography>
+        </Box>
+      </CardContent>
+    </Card>
+  )
+}
+
+// Droppable Column Component
+function DroppableColumn({ id, children, isOver }) {
+  const { setNodeRef } = useDroppable({ id })
+
+  return (
+    <Box 
+      ref={setNodeRef}
+      sx={{ 
+        minHeight: 200, 
+        p: 1,
+        borderRadius: 2,
+        backgroundColor: isOver ? '#f0f9ff' : '#fafafa',
+        border: isOver ? '2px dashed #3b82f6' : '2px dashed transparent',
+        transition: 'all 0.2s ease'
+      }}
+    >
+      {children}
+    </Box>
+  )
+}
+
 export default function TaskMaster({ user, onBack }) {
   // TASKMASTER state
   const [projects, setProjects] = useState([])
   const [selectedProject, setSelectedProject] = useState(null)
   const [projectModalOpen, setProjectModalOpen] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
+  const [taskDetailOpen, setTaskDetailOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState(null)
   const [editingTask, setEditingTask] = useState(null)
+  const [activeId, setActiveId] = useState(null)
+  
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor)
+  )
 
   // Load TASKMASTER projects from Firestore
   useEffect(() => {
@@ -237,111 +594,273 @@ export default function TaskMaster({ user, onBack }) {
     setSelectedProject(updatedProject)
   }
 
+  // Drag and drop handlers
+  const handleDragStart = (event) => {
+    setActiveId(event.active.id)
+  }
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+    setActiveId(null)
+
+    if (!over || !selectedProject) return
+
+    const taskId = active.id
+    const newStatus = over.id
+
+    if (newStatus === 'todo' || newStatus === 'inprogress' || newStatus === 'done') {
+      handleUpdateTaskStatus(taskId, newStatus)
+    }
+  }
+
+  const handleTaskClick = (task) => {
+    setSelectedTask(task)
+    setTaskDetailOpen(true)
+  }
+
+  const handleTaskUpdate = async (taskData) => {
+    if (!selectedProject || !selectedTask) return
+    const updatedProject = {
+      ...selectedProject,
+      tasks: selectedProject.tasks.map(task => 
+        task.id === selectedTask.id ? { ...task, title: taskData.title, description: taskData.description || '' } : task
+      )
+    }
+    const newProjects = projects.map(p => p.id === selectedProject.id ? updatedProject : p)
+    await saveProjects(newProjects)
+    setSelectedProject(updatedProject)
+    setSelectedTask({ ...selectedTask, ...taskData })
+  }
+
   // TASKMASTER Implementation - Project list view
   if (!selectedProject) {
     return (
-      <Box sx={{ bgcolor: 'linear-gradient(120deg, #f5f7fa 60%, #e3f0ff 100%)', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
-        <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100vh' }}>
-          <Paper elevation={4} sx={{ maxWidth: 1200, width: '100%', mx: 'auto', p: { xs: 2, sm: 4 }, borderRadius: 5, boxShadow: '0 8px 32px #2563eb22' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<ArrowBackIcon />}
-                  sx={{ borderRadius: 99, fontWeight: 600 }}
-                  onClick={onBack}
-                >
-                  Back to Home
-                </Button>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#2563eb', display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <ViewKanbanIcon fontSize="large" />
+      <Container maxWidth={false} sx={{ 
+        minHeight: '100vh',
+        bgcolor: '#f8fafc',
+        py: 3,
+        px: { xs: 2, sm: 3, md: 4 }
+      }}>
+        {/* Header */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: isMobile ? 'column' : 'row',
+          justifyContent: 'space-between', 
+          alignItems: isMobile ? 'stretch' : 'center', 
+          mb: 4,
+          gap: 2
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              sx={{ borderRadius: 2, fontWeight: 600 }}
+              onClick={onBack}
+            >
+              Back to App
+            </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <ViewKanbanIcon sx={{ fontSize: 36, color: '#2563eb' }} />
+              <Box>
+                <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 700, color: '#1e293b' }}>
                   TASKMASTER
                 </Typography>
+                <Typography variant="body2" sx={{ color: '#64748b' }}>
+                  Manage your projects and track progress
+                </Typography>
               </Box>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                sx={{ borderRadius: 99, fontWeight: 600 }}
-                onClick={() => setProjectModalOpen(true)}
-              >
-                New Project
-              </Button>
             </Box>
-
-            {projects.length === 0 ? (
-              <Box sx={{ textAlign: 'center', py: 8 }}>
-                <FolderIcon sx={{ fontSize: 64, color: '#64748b', mb: 2 }} />
-                <Typography variant="h6" sx={{ color: '#64748b', mb: 2 }}>No projects yet</Typography>
-                <Typography variant="body1" sx={{ color: '#94a3b8', mb: 3 }}>Create your first project to get started with TASKMASTER</Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  sx={{ borderRadius: 99, fontWeight: 600 }}
-                  onClick={() => setProjectModalOpen(true)}
-                >
-                  Create Project
-                </Button>
-              </Box>
-            ) : (
-              <Grid container spacing={3}>
-                {projects.map((project) => (
-                  <Grid item xs={12} sm={6} md={4} key={project.id}>
-                    <Card 
-                      sx={{ 
-                        height: '100%', 
-                        cursor: 'pointer', 
-                        '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 12px 32px rgba(37, 99, 235, 0.15)' },
-                        transition: 'all 0.2s ease-in-out',
-                        borderRadius: 3
-                      }}
-                      onClick={() => setSelectedProject(project)}
-                    >
-                      <CardContent sx={{ p: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                          <Typography variant="h6" sx={{ fontWeight: 700, color: '#2563eb' }}>
-                            {project.name}
-                          </Typography>
-                          <IconButton 
-                            size="small" 
-                            sx={{ color: '#ef4444' }}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (window.confirm('Are you sure you want to delete this project?')) {
-                                handleDeleteProject(project.id)
-                              }
-                            }}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Box>
-                        <Typography variant="body2" sx={{ color: '#64748b', mb: 2, minHeight: 40 }}>
-                          {project.description || 'No description'}
-                        </Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Chip 
-                            label={`${project.tasks?.length || 0} tasks`} 
-                            size="small" 
-                            sx={{ bgcolor: '#e0e7ff', color: '#2563eb', fontWeight: 600 }}
-                          />
-                          <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                            {format(new Date(project.createdAt), 'MMM dd, yyyy')}
-                          </Typography>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            )}
-
-            <ProjectModal
-              open={projectModalOpen}
-              onClose={() => setProjectModalOpen(false)}
-              onSave={handleCreateProject}
-            />
-          </Paper>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            sx={{ 
+              borderRadius: 2, 
+              fontWeight: 600,
+              bgcolor: '#2563eb',
+              '&:hover': { bgcolor: '#1d4ed8' }
+            }}
+            onClick={() => setProjectModalOpen(true)}
+          >
+            Create Project
+          </Button>
         </Box>
-      </Box>
+
+        {projects.length === 0 ? (
+          <Paper sx={{ 
+            textAlign: 'center', 
+            py: 8, 
+            px: 4,
+            borderRadius: 3,
+            border: '1px solid #e2e8f0',
+            bgcolor: '#fff'
+          }}>
+            <ViewKanbanIcon sx={{ fontSize: 80, color: '#cbd5e1', mb: 3 }} />
+            <Typography variant="h5" sx={{ color: '#1e293b', mb: 2, fontWeight: 600 }}>
+              No projects yet
+            </Typography>
+            <Typography variant="body1" sx={{ color: '#64748b', mb: 4, maxWidth: 400, mx: 'auto' }}>
+              Create your first project to start organizing tasks and tracking progress with our kanban-style board
+            </Typography>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<AddIcon />}
+              sx={{ 
+                borderRadius: 2, 
+                fontWeight: 600,
+                py: 1.5,
+                px: 4,
+                bgcolor: '#2563eb',
+                '&:hover': { bgcolor: '#1d4ed8' }
+              }}
+              onClick={() => setProjectModalOpen(true)}
+            >
+              Create Your First Project
+            </Button>
+          </Paper>
+        ) : (
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, 1fr)',
+              md: 'repeat(3, 1fr)',
+              lg: 'repeat(4, 1fr)'
+            },
+            gap: 3
+          }}>
+            {projects.map((project) => (
+              <Card 
+                key={project.id}
+                sx={{ 
+                  borderRadius: 3, 
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
+                  transition: 'all 0.2s ease', 
+                  '&:hover': { 
+                    transform: 'translateY(-2px)', 
+                    boxShadow: '0 8px 25px rgba(0,0,0,0.15)' 
+                  },
+                  cursor: 'pointer'
+                }}
+                onClick={() => setSelectedProject(project)}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+                    <Avatar sx={{ bgcolor: '#2563eb', width: 40, height: 40 }}>
+                      {project.name?.charAt(0)?.toUpperCase()}
+                    </Avatar>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 700, 
+                          mb: 0.5,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {project.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                        {format(new Date(project.createdAt), 'MMM dd, yyyy')}
+                      </Typography>
+                    </Box>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (window.confirm('Delete this project and all its tasks?')) {
+                          handleDeleteProject(project.id)
+                        }
+                      }}
+                      sx={{ opacity: 0.6, '&:hover': { opacity: 1 } }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                  
+                  {project.description && (
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: '#64748b', 
+                        mb: 3,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        minHeight: 40
+                      }}
+                    >
+                      {project.description}
+                    </Typography>
+                  )}
+                  
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 3 }}>
+                    <Chip 
+                      size="small" 
+                      label={`${project.tasks?.filter(t => t.status === 'todo').length || 0} To Do`} 
+                      sx={{ 
+                        bgcolor: '#fef2f2', 
+                        color: '#ef4444',
+                        fontSize: '0.75rem',
+                        height: 24
+                      }} 
+                    />
+                    <Chip 
+                      size="small" 
+                      label={`${project.tasks?.filter(t => t.status === 'inprogress').length || 0} In Progress`} 
+                      sx={{ 
+                        bgcolor: '#fffbeb', 
+                        color: '#f59e0b',
+                        fontSize: '0.75rem',
+                        height: 24
+                      }} 
+                    />
+                    <Chip 
+                      size="small" 
+                      label={`${project.tasks?.filter(t => t.status === 'done').length || 0} Done`} 
+                      sx={{ 
+                        bgcolor: '#f0fdf4', 
+                        color: '#10b981',
+                        fontSize: '0.75rem',
+                        height: 24
+                      }} 
+                    />
+                  </Box>
+                  
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    sx={{ 
+                      borderRadius: 2, 
+                      fontWeight: 600,
+                      bgcolor: '#2563eb',
+                      '&:hover': { bgcolor: '#1d4ed8' }
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedProject(project)
+                    }}
+                  >
+                    Open Project
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+        )}
+
+        <ProjectModal
+          open={projectModalOpen}
+          onClose={() => setProjectModalOpen(false)}
+          onSave={handleCreateProject}
+        />
+      </Container>
     )
   }
 
@@ -350,182 +869,222 @@ export default function TaskMaster({ user, onBack }) {
   const inProgressTasks = selectedProject.tasks.filter(task => task.status === 'inprogress')
   const doneTasks = selectedProject.tasks.filter(task => task.status === 'done')
 
+  const activeTask = activeId ? selectedProject.tasks.find(task => task.id === activeId) : null
+
   return (
-    <Box sx={{ bgcolor: 'linear-gradient(120deg, #f5f7fa 60%, #e3f0ff 100%)', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100vh' }}>
-        <Paper elevation={4} sx={{ maxWidth: 1400, width: '100%', mx: 'auto', p: { xs: 2, sm: 4 }, borderRadius: 5, boxShadow: '0 8px 32px #2563eb22' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Button
-                variant="outlined"
-                startIcon={<ArrowBackIcon />}
-                sx={{ borderRadius: 99, fontWeight: 600 }}
-                onClick={() => setSelectedProject(null)}
-              >
-                Back to Projects
-              </Button>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: '#2563eb' }}>
-                {selectedProject.name}
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              sx={{ borderRadius: 99, fontWeight: 600 }}
-              onClick={() => {
-                setEditingTask(null)
-                setTaskModalOpen(true)
-              }}
-            >
-              Add Task
-            </Button>
-          </Box>
-
-          {selectedProject.description && (
-            <Typography variant="body1" sx={{ color: '#64748b', mb: 4, fontStyle: 'italic' }}>
-              {selectedProject.description}
+    <Container maxWidth={false} sx={{ 
+      minHeight: '100vh',
+      bgcolor: '#f8fafc',
+      py: 3,
+      px: { xs: 2, sm: 3, md: 4 }
+    }}>
+      {/* Header */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row',
+        justifyContent: 'space-between', 
+        alignItems: isMobile ? 'stretch' : 'center', 
+        mb: 4,
+        gap: 2
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            sx={{ borderRadius: 2, fontWeight: 600 }}
+            onClick={() => setSelectedProject(null)}
+          >
+            Back to Projects
+          </Button>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Typography variant={isMobile ? "h6" : "h5"} sx={{ fontWeight: 700, color: '#1e293b' }}>
+              {selectedProject.name}
             </Typography>
-          )}
-
-          <Grid container spacing={3}>
-            {/* Todo Column */}
-            <Grid item xs={12} md={4}>
-              <Paper sx={{ p: 2, bgcolor: '#fef3c7', borderRadius: 3, minHeight: 400 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#92400e', mb: 2, textAlign: 'center' }}>
-                  TO DO ({todoTasks.length})
-                </Typography>
-                <Stack spacing={2}>
-                  {todoTasks.map((task) => (
-                    <Card key={task.id} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                      <CardContent sx={{ p: 2 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                          {task.title}
-                        </Typography>
-                        {task.description && (
-                          <Typography variant="body2" sx={{ color: '#64748b', mb: 2 }}>
-                            {task.description}
-                          </Typography>
-                        )}
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button size="small" onClick={() => handleUpdateTaskStatus(task.id, 'inprogress')}>
-                            Start
-                          </Button>
-                          <Button size="small" onClick={() => {
-                            setEditingTask(task)
-                            setTaskModalOpen(true)
-                          }}>
-                            Edit
-                          </Button>
-                          <Button size="small" color="error" onClick={() => {
-                            if (window.confirm('Delete this task?')) {
-                              handleDeleteProjectTask(task.id)
-                            }
-                          }}>
-                            Delete
-                          </Button>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </Stack>
-              </Paper>
-            </Grid>
-
-            {/* In Progress Column */}
-            <Grid item xs={12} md={4}>
-              <Paper sx={{ p: 2, bgcolor: '#dbeafe', borderRadius: 3, minHeight: 400 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e40af', mb: 2, textAlign: 'center' }}>
-                  IN PROGRESS ({inProgressTasks.length})
-                </Typography>
-                <Stack spacing={2}>
-                  {inProgressTasks.map((task) => (
-                    <Card key={task.id} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                      <CardContent sx={{ p: 2 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                          {task.title}
-                        </Typography>
-                        {task.description && (
-                          <Typography variant="body2" sx={{ color: '#64748b', mb: 2 }}>
-                            {task.description}
-                          </Typography>
-                        )}
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button size="small" onClick={() => handleUpdateTaskStatus(task.id, 'todo')}>
-                            Back
-                          </Button>
-                          <Button size="small" onClick={() => handleUpdateTaskStatus(task.id, 'done')}>
-                            Done
-                          </Button>
-                          <Button size="small" onClick={() => {
-                            setEditingTask(task)
-                            setTaskModalOpen(true)
-                          }}>
-                            Edit
-                          </Button>
-                          <Button size="small" color="error" onClick={() => {
-                            if (window.confirm('Delete this task?')) {
-                              handleDeleteProjectTask(task.id)
-                            }
-                          }}>
-                            Delete
-                          </Button>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </Stack>
-              </Paper>
-            </Grid>
-
-            {/* Done Column */}
-            <Grid item xs={12} md={4}>
-              <Paper sx={{ p: 2, bgcolor: '#d1fae5', borderRadius: 3, minHeight: 400 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#065f46', mb: 2, textAlign: 'center' }}>
-                  DONE ({doneTasks.length})
-                </Typography>
-                <Stack spacing={2}>
-                  {doneTasks.map((task) => (
-                    <Card key={task.id} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', opacity: 0.8 }}>
-                      <CardContent sx={{ p: 2 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, textDecoration: 'line-through' }}>
-                          {task.title}
-                        </Typography>
-                        {task.description && (
-                          <Typography variant="body2" sx={{ color: '#64748b', mb: 2 }}>
-                            {task.description}
-                          </Typography>
-                        )}
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button size="small" onClick={() => handleUpdateTaskStatus(task.id, 'inprogress')}>
-                            Reopen
-                          </Button>
-                          <Button size="small" color="error" onClick={() => {
-                            if (window.confirm('Delete this task?')) {
-                              handleDeleteProjectTask(task.id)
-                            }
-                          }}>
-                            Delete
-                          </Button>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </Stack>
-              </Paper>
-            </Grid>
-          </Grid>
-
-          <TaskModal
-            open={taskModalOpen}
-            onClose={() => {
-              setTaskModalOpen(false)
-              setEditingTask(null)
-            }}
-            onSave={editingTask ? handleEditProjectTask : handleCreateTask}
-            initial={editingTask}
-          />
-        </Paper>
+            {selectedProject.description && (
+              <Typography variant="body2" sx={{ color: '#64748b' }}>
+                {selectedProject.description}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          sx={{ 
+            borderRadius: 2, 
+            fontWeight: 600,
+            bgcolor: '#2563eb',
+            '&:hover': { bgcolor: '#1d4ed8' }
+          }}
+          onClick={() => {
+            setEditingTask(null)
+            setTaskModalOpen(true)
+          }}
+        >
+          Create Task
+        </Button>
       </Box>
-    </Box>
+
+      {/* Kanban Board */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+          gap: 3,
+          minHeight: 'calc(100vh - 200px)'
+        }}>
+          {/* TO DO Column */}
+          <Paper 
+            sx={{ 
+              p: 2, 
+              bgcolor: '#fff',
+              borderRadius: 3, 
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#ef4444' }}>
+                TO DO
+              </Typography>
+              <Chip 
+                label={todoTasks.length} 
+                size="small"
+                sx={{ 
+                  bgcolor: '#fef2f2', 
+                  color: '#ef4444',
+                  fontWeight: 600,
+                  minWidth: 24
+                }}
+              />
+            </Box>
+            
+            <DroppableColumn id="todo" isOver={false}>
+              <SortableContext items={todoTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                {todoTasks.map((task) => (
+                  <TaskCard 
+                    key={task.id} 
+                    task={task} 
+                    onClick={() => handleTaskClick(task)}
+                  />
+                ))}
+              </SortableContext>
+            </DroppableColumn>
+          </Paper>
+
+          {/* IN PROGRESS Column */}
+          <Paper 
+            sx={{ 
+              p: 2, 
+              bgcolor: '#fff',
+              borderRadius: 3, 
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#f59e0b' }}>
+                IN PROGRESS
+              </Typography>
+              <Chip 
+                label={inProgressTasks.length} 
+                size="small"
+                sx={{ 
+                  bgcolor: '#fffbeb', 
+                  color: '#f59e0b',
+                  fontWeight: 600,
+                  minWidth: 24
+                }}
+              />
+            </Box>
+            
+            <DroppableColumn id="inprogress" isOver={false}>
+              <SortableContext items={inProgressTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                {inProgressTasks.map((task) => (
+                  <TaskCard 
+                    key={task.id} 
+                    task={task} 
+                    onClick={() => handleTaskClick(task)}
+                  />
+                ))}
+              </SortableContext>
+            </DroppableColumn>
+          </Paper>
+
+          {/* DONE Column */}
+          <Paper 
+            sx={{ 
+              p: 2, 
+              bgcolor: '#fff',
+              borderRadius: 3, 
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#10b981' }}>
+                DONE
+              </Typography>
+              <Chip 
+                label={doneTasks.length} 
+                size="small"
+                sx={{ 
+                  bgcolor: '#f0fdf4', 
+                  color: '#10b981',
+                  fontWeight: 600,
+                  minWidth: 24
+                }}
+              />
+            </Box>
+            
+            <DroppableColumn id="done" isOver={false}>
+              <SortableContext items={doneTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                {doneTasks.map((task) => (
+                  <TaskCard 
+                    key={task.id} 
+                    task={task} 
+                    onClick={() => handleTaskClick(task)}
+                  />
+                ))}
+              </SortableContext>
+            </DroppableColumn>
+          </Paper>
+        </Box>
+
+        <DragOverlay>
+          {activeTask ? (
+            <TaskCard task={activeTask} onClick={() => {}} />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      {/* Modals */}
+      <TaskModal
+        open={taskModalOpen}
+        onClose={() => {
+          setTaskModalOpen(false)
+          setEditingTask(null)
+        }}
+        onSave={editingTask ? handleEditProjectTask : handleCreateTask}
+        initial={editingTask}
+      />
+
+      <TaskDetailModal
+        task={selectedTask}
+        open={taskDetailOpen}
+        onClose={() => {
+          setTaskDetailOpen(false)
+          setSelectedTask(null)
+        }}
+        onUpdate={handleTaskUpdate}
+        onDelete={handleDeleteProjectTask}
+        onStatusChange={handleUpdateTaskStatus}
+      />
+    </Container>
   )
 } 
