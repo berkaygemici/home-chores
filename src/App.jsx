@@ -18,12 +18,14 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
+
 import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { format, isBefore, isToday, isPast } from 'date-fns'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import HomeIcon from '@mui/icons-material/Home'
+import TaskMaster from './TaskMaster'
 
 const SECTIONS = ['All', 'Kitchen', 'Closet', 'Bathroom', 'Living Room', 'Bedroom', 'Other']
 
@@ -181,6 +183,8 @@ function SectionModal({ open, onClose, sections, onAdd, onDelete }) {
   )
 }
 
+
+
 export default function App() {
   const [user, setUser] = useState(null)
   const [mode, setMode] = useState(null) // 'chores' or 'tasks'
@@ -197,6 +201,8 @@ export default function App() {
   const [deleteContext, setDeleteContext] = useState({})
   const [shareOpen, setShareOpen] = useState(false)
   const shareUrl = `${window.location.origin}/share/${user ? user.uid : ''}`
+
+
 
   // Auth state
   useEffect(() => {
@@ -232,6 +238,8 @@ export default function App() {
     return () => clearTimeout(timeout)
   }, [user])
 
+
+
   // Save chores
   const saveChores = async (newChores) => {
     if (!user) return
@@ -251,7 +259,7 @@ export default function App() {
     setModalOpen(false)
     setQuickAddDate(null)
   }
-  const handleEditTask = async (task) => {
+  const handleEditChore = async (task) => {
     if (editIdx == null) return
     const newChores = chores.map((c, i) => i === editIdx ? { ...c, ...task } : c)
     await saveChores(newChores)
@@ -259,7 +267,7 @@ export default function App() {
     setModalOpen(false)
     setQuickAddDate(null)
   }
-  const handleDeleteTask = async (type, isoDate) => {
+  const handleDeleteChore = async (type, isoDate) => {
     if (editIdx == null) return
     if (type === 'all') {
       const newChores = chores.filter((_, i) => i !== editIdx)
@@ -300,6 +308,8 @@ export default function App() {
     const newChores = chores.map(c => c.section === section ? { ...c, section: 'Other' } : c)
     await saveChores(newChores)
   }
+
+
 
   // Keyboard shortcut for 'c' to open add task modal
   useEffect(() => {
@@ -425,7 +435,7 @@ export default function App() {
             }}
             onClick={() => setMode('tasks')}
           >
-            TASKMASTER (JIRA)
+            TASKMASTER
           </Button>
         </Box>
       </Box>
@@ -433,16 +443,7 @@ export default function App() {
   }
 
   if (mode === 'tasks') {
-    // Placeholder for TaskMaster (Jira Clone)
-    return (
-      <Box sx={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', bgcolor:'#f5f7fa'}}>
-        <Box sx={{p:4, borderRadius:4, boxShadow:'0 8px 32px #2563eb22', bgcolor:'#fff', minWidth:320, textAlign:'center'}}>
-          <h2 style={{fontWeight:700, color:'#2563eb'}}>TaskMaster</h2>
-          <p>Jira Clone coming soon...</p>
-          <Button variant="outlined" sx={{borderRadius:99, fontWeight:600, mt:2}} onClick={()=>setMode(null)}>Back</Button>
-        </Box>
-      </Box>
-    )
+    return <TaskMaster user={user} onBack={() => setMode(null)} />
   }
 
   if (mode === 'chores') {
@@ -538,11 +539,11 @@ export default function App() {
             <TaskModal
               open={modalOpen}
               onClose={()=>{setModalOpen(false); setEditIdx(null); setModalInitial(null); setQuickAddDate(null);}}
-              onSave={editIdx==null?handleAddTask:handleEditTask}
+              onSave={editIdx==null?handleAddTask:handleEditChore}
               initial={modalInitial}
               occurrenceDate={modalInitial?.occurrenceDate || modalInitial?.dateTime}
               sections={sections}
-              onDelete={editIdx!=null?handleDeleteTask:undefined}
+              onDelete={editIdx!=null?handleDeleteChore:undefined}
             />
             <SectionModal
               open={sectionModalOpen}
