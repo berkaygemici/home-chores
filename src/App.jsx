@@ -69,7 +69,7 @@ function addRecurringEvents(chore, choreIdx) {
   return events
 }
 
-function TaskModal({ open, onClose, onSave, initial, sections, onDelete }) {
+function TaskModal({ open, onClose, onSave, initial, occurrenceDate, sections, onDelete }) {
   const [name, setName] = useState(initial?.name || '')
   const [dateTime, setDateTime] = useState(initial?.dateTime ? new Date(initial.dateTime) : new Date())
   const [repeat, setRepeat] = useState(initial?.repeat || 'none')
@@ -92,41 +92,52 @@ function TaskModal({ open, onClose, onSave, initial, sections, onDelete }) {
   const handleDeleteConfirm = (type) => {
     setDeleteType(type)
     setDeletePrompt(false)
-    onDelete(type, dateTime.toISOString())
+    onDelete(type, type === 'single' ? occurrenceDate : dateTime.toISOString())
   }
 
   return (
-    <Dialog open={open} onClose={onClose}>
-      <DialogTitle>{initial ? 'Edit Task' : 'Add Task'}</DialogTitle>
-      <DialogContent sx={{display:'flex', flexDirection:'column', gap:2, minWidth:300}}>
-        <TextField label="Task name" value={name} onChange={e => setName(e.target.value)} required autoFocus />
+    <Dialog open={open} onClose={onClose} PaperProps={{
+      sx: {
+        borderRadius: 4,
+        boxShadow: '0 8px 32px #2563eb33',
+        minWidth: 340,
+        p: 0,
+        overflow: 'visible',
+        background: 'linear-gradient(120deg, #f5f7fa 60%, #e3f0ff 100%)',
+      }
+    }}>
+      <DialogTitle sx={{ fontWeight: 700, fontSize: '1.35rem', color: '#2563eb', pb: 0 }}>{initial ? 'Edit Task' : 'Add Task'}</DialogTitle>
+      <DialogContent sx={{display:'flex', flexDirection:'column', gap:2, minWidth:320, pt:2, pb:1}}>
+        <TextField label="Task name" value={name} onChange={e => setName(e.target.value)} required autoFocus fullWidth sx={{mb:1, borderRadius:2, background:'#fff'}}/>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <DateTimePicker
             label="Date & Time"
             value={dateTime}
             onChange={setDateTime}
             ampm={false}
-            renderInput={(params) => <TextField {...params} />}
+            renderInput={(params) => <TextField {...params} fullWidth sx={{borderRadius:2, background:'#fff'}} />}
           />
         </LocalizationProvider>
-        <FormControl fullWidth>
+        <FormControl fullWidth sx={{mb:1, borderRadius:2, background:'#fff'}}>
           <InputLabel>Repeat</InputLabel>
           <Select value={repeat} label="Repeat" onChange={e => setRepeat(e.target.value)}>
             {REPEAT_OPTIONS.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
           </Select>
         </FormControl>
-        <FormControl fullWidth>
+        <FormControl fullWidth sx={{mb:1, borderRadius:2, background:'#fff'}}>
           <InputLabel>Section</InputLabel>
           <Select value={section} label="Section" onChange={e => setSection(e.target.value)}>
             {sections.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </Select>
         </FormControl>
-        <TextField label="Description (optional)" value={description} onChange={e => setDescription(e.target.value)} multiline minRows={2} />
+        <TextField label="Description (optional)" value={description} onChange={e => setDescription(e.target.value)} multiline minRows={2} fullWidth sx={{borderRadius:2, background:'#fff'}}/>
       </DialogContent>
-      <DialogActions>
-        {onDelete && <Button color="error" startIcon={<DeleteIcon />} onClick={handleDelete}>Delete</Button>}
-        <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={() => onSave({ name, dateTime: dateTime.toISOString(), repeat, section, description })}>{initial ? 'Save' : 'Add'}</Button>
+      <DialogActions sx={{px:3, pb:2, pt:1, justifyContent:'space-between'}}>
+        {onDelete && <Button color="error" startIcon={<DeleteIcon />} onClick={handleDelete} sx={{borderRadius:99, fontWeight:600}}>Delete</Button>}
+        <Box sx={{display:'flex', gap:1}}>
+          <Button onClick={onClose} sx={{borderRadius:99, fontWeight:600}}>Cancel</Button>
+          <Button variant="contained" onClick={() => onSave({ name, dateTime: dateTime.toISOString(), repeat, section, description })} sx={{borderRadius:99, fontWeight:600, boxShadow:'0 2px 8px #2563eb22'}}>{initial ? 'Save' : 'Add'}</Button>
+        </Box>
       </DialogActions>
       <Dialog open={deletePrompt} onClose={()=>setDeletePrompt(false)}>
         <DialogTitle>Delete Task</DialogTitle>
@@ -416,6 +427,7 @@ export default function App() {
             onClose={()=>{setModalOpen(false); setEditIdx(null); setModalInitial(null); setQuickAddDate(null);}}
             onSave={editIdx==null?handleAddTask:handleEditTask}
             initial={modalInitial}
+            occurrenceDate={modalInitial?.occurrenceDate || modalInitial?.dateTime}
             sections={sections}
             onDelete={editIdx!=null?handleDeleteTask:undefined}
           />

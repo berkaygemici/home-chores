@@ -160,15 +160,15 @@ ul li button:hover {
 }
 .modal {
   background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 8px 32px #2563eb33;
-  padding: 32px 24px 20px 24px;
-  min-width: 320px;
-  max-width: 90vw;
+  border-radius: 18px;
+  box-shadow: 0 12px 36px #2563eb33, 0 1.5px 8px #2563eb11;
+  padding: 40px 28px 24px 28px;
+  min-width: 340px;
+  max-width: 96vw;
   min-height: 120px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   animation: modal-in 0.18s cubic-bezier(.4,2,.6,1) both;
 }
 @keyframes modal-in {
@@ -176,39 +176,49 @@ ul li button:hover {
   to { opacity: 1; transform: none; }
 }
 .modal h2 {
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
   color: #2563eb;
-  font-size: 1.3rem;
+  font-size: 1.45rem;
+  font-weight: 700;
 }
-.modal input {
-  padding: 8px;
-  border: 1px solid #b6c6e3;
-  border-radius: 5px;
-  font-size: 1rem;
-  margin-bottom: 8px;
+.modal input, .modal textarea, .modal select {
+  padding: 10px;
+  border: 1.5px solid #b6c6e3;
+  border-radius: 8px;
+  font-size: 1.08rem;
+  margin-bottom: 10px;
+  background: #f8fafc;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+.modal input:focus, .modal textarea:focus, .modal select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px #2563eb22;
+  outline: none;
 }
 .modal-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 14px;
+  margin-top: 12px;
+  justify-content: flex-end;
 }
 .modal-actions button {
-  padding: 8px 16px;
+  padding: 10px 22px;
   border: none;
-  border-radius: 5px;
+  border-radius: 99px;
   font-weight: bold;
-  font-size: 1rem;
+  font-size: 1.08rem;
   cursor: pointer;
-  background: #2563eb;
+  background: linear-gradient(90deg, #2563eb 60%, #60a5fa 100%);
   color: #fff;
-  transition: background 0.2s;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px #2563eb22;
 }
 .modal-actions button.delete {
-  background: #e11d48;
+  background: linear-gradient(90deg, #e11d48 60%, #f87171 100%);
 }
 .modal-actions button.delete:hover {
-  background: #be123c;
+  background: linear-gradient(90deg, #be123c 60%, #f87171 100%);
 }
 .modal-actions button:not(.delete):hover {
-  background: #1d4ed8;
+  background: linear-gradient(90deg, #1d4ed8 60%, #60a5fa 100%);
 }
