@@ -208,9 +208,35 @@ export default function App() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u)
+      // Check for pending invitations after login
+      if (u) {
+        checkPendingInvitations(u)
+      }
     })
     return unsub
   }, [])
+
+  // Check for pending invitations after login
+  const checkPendingInvitations = async (user) => {
+    const pendingInvitation = localStorage.getItem('pendingInvitation')
+    if (pendingInvitation) {
+      try {
+        const invitationData = JSON.parse(pendingInvitation)
+        
+        // Check if the logged-in user's email matches the invitation
+        if (user.email === invitationData.email) {
+          // Redirect to invitation handler
+          window.location.href = `/invite/${invitationData.projectId}/${invitationData.invitationId}`
+        } else {
+          // Clear the pending invitation if emails don't match
+          localStorage.removeItem('pendingInvitation')
+        }
+      } catch (error) {
+        console.error('Error processing pending invitation:', error)
+        localStorage.removeItem('pendingInvitation')
+      }
+    }
+  }
 
   // Load chores and sections from Firestore
   useEffect(() => {

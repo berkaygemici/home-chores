@@ -1327,11 +1327,14 @@ export default function TaskMaster({ user, onBack }) {
 
   const handleCreateProject = async (projectData) => {
     const newProject = {
-      id: Date.now().toString(),
+      id: `${user.uid}_${Date.now()}`,
       name: projectData.name,
       description: projectData.description || '',
       createdAt: new Date().toISOString(),
-      tasks: []
+      tasks: [],
+      members: [currentUser],
+      invitations: [],
+      ownerId: user.uid
     }
     await saveProjects([...projects, newProject])
     setProjectModalOpen(false)
