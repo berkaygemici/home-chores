@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -25,7 +26,6 @@ import { format, isBefore, isToday, isPast } from 'date-fns'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import HomeIcon from '@mui/icons-material/Home'
-import TaskMaster from './TaskMaster'
 
 const SECTIONS = ['All', 'Kitchen', 'Closet', 'Bathroom', 'Living Room', 'Bedroom', 'Other']
 
@@ -188,6 +188,7 @@ function SectionModal({ open, onClose, sections, onAdd, onDelete }) {
 export default function App() {
   const [user, setUser] = useState(null)
   const [mode, setMode] = useState(null) // 'chores' or 'tasks'
+  const navigate = useNavigate()
   const [chores, setChores] = useState([])
   const [sections, setSections] = useState(['Other'])
   const [modalOpen, setModalOpen] = useState(false)
@@ -459,7 +460,7 @@ export default function App() {
                 borderColor: '#1d4ed8',
               },
             }}
-            onClick={() => setMode('tasks')}
+            onClick={() => navigate('/taskmaster')}
           >
             TASKMASTER
           </Button>
@@ -468,9 +469,7 @@ export default function App() {
     )
   }
 
-  if (mode === 'tasks') {
-    return <TaskMaster user={user} onBack={() => setMode(null)} />
-  }
+
 
   if (mode === 'chores') {
     // Render ChoresMaster with Home button inside sidebar
