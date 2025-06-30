@@ -12,7 +12,8 @@ import {
   MenuItem,
   Box,
   Typography,
-  Avatar
+  Avatar,
+  Collapse
 } from '@mui/material'
 
 import { HABIT_CATEGORIES, DIFFICULTY_LEVELS, HABIT_FREQUENCIES } from '../constants/habitConstants'
@@ -23,7 +24,8 @@ export default function HabitModal({ open, onClose, onSave, habit = null }) {
     description: '',
     category: 'health',
     difficulty: 'medium',
-    frequency: 'daily'
+    frequency: 'daily',
+    customInterval: 1
   })
 
   useEffect(() => {
@@ -33,7 +35,8 @@ export default function HabitModal({ open, onClose, onSave, habit = null }) {
         description: habit.description || '',
         category: habit.category || 'health',
         difficulty: habit.difficulty || 'medium',
-        frequency: habit.frequency || 'daily'
+        frequency: habit.frequency || 'daily',
+        customInterval: habit.customInterval || 1
       })
     } else {
       setFormData({
@@ -41,7 +44,8 @@ export default function HabitModal({ open, onClose, onSave, habit = null }) {
         description: '',
         category: 'health',
         difficulty: 'medium',
-        frequency: 'daily'
+        frequency: 'daily',
+        customInterval: 1
       })
     }
   }, [habit, open])
@@ -57,6 +61,11 @@ export default function HabitModal({ open, onClose, onSave, habit = null }) {
       createdAt: habit?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       completions: habit?.completions || []
+    }
+
+    // Only include customInterval if frequency is custom
+    if (formData.frequency === 'custom') {
+      habitData.customInterval = parseInt(formData.customInterval) || 1
     }
 
     onSave(habitData)
@@ -166,6 +175,42 @@ export default function HabitModal({ open, onClose, onSave, habit = null }) {
               ))}
             </Select>
           </FormControl>
+
+          {/* Custom Interval Input - appears when Custom frequency is selected */}
+          <Collapse in={formData.frequency === 'custom'}>
+            <Box sx={{ 
+              p: 3, 
+              bgcolor: '#f8fafc', 
+              borderRadius: 2, 
+              border: '1px solid #e2e8f0' 
+            }}>
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: '#374151' }}>
+                Custom Interval Settings
+              </Typography>
+              <TextField
+                label="Repeat every X days"
+                type="number"
+                value={formData.customInterval}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 1
+                  setFormData(prev => ({ ...prev, customInterval: Math.max(1, value) }))
+                }}
+                inputProps={{ min: 1, max: 365 }}
+                fullWidth
+                helperText={`This habit will be due every ${formData.customInterval} day${formData.customInterval > 1 ? 's' : ''}`}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: '#fff'
+                  }
+                }}
+              />
+              <Box sx={{ mt: 2, p: 2, bgcolor: '#e0f2fe', borderRadius: 1 }}>
+                <Typography variant="caption" sx={{ color: '#0369a1', fontWeight: 500 }}>
+                  💡 Examples: 1 = daily, 2 = every other day, 7 = weekly, 14 = bi-weekly
+                </Typography>
+              </Box>
+            </Box>
+          </Collapse>
         </Box>
       </DialogContent>
 
