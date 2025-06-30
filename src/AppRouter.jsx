@@ -6,6 +6,7 @@ import App from './App.jsx'
 import SharedCalendar from './SharedCalendar.jsx'
 import InvitationHandler from './InvitationHandler.jsx'
 import TaskMasterPage from './TaskMasterPage.jsx'
+import HabitMasterPage from './HabitMasterPage.jsx'
 import AuthPage from './AuthPage.jsx'
 
 export default function AppRouter() {
@@ -46,6 +47,7 @@ export default function AppRouter() {
       <Route path="/" element={<App />} />
       <Route path="/share/:userId" element={<SharedCalendar />} />
       <Route path="/taskmaster" element={<TaskMasterPage />} />
+      <Route path="/habitmaster" element={<HabitMasterPage />} />
       <Route 
         path="/invite/:projectId/:invitationId" 
         element={

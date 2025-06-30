@@ -447,6 +447,7 @@ export default function App() {
           <Button
             variant="outlined"
             sx={{
+              mb: 2,
               borderRadius: 99,
               fontWeight: 700,
               width: '100%',
@@ -463,6 +464,26 @@ export default function App() {
             onClick={() => navigate('/taskmaster')}
           >
             TASKMASTER
+          </Button>
+          <Button
+            variant="outlined"
+            sx={{
+              borderRadius: 99,
+              fontWeight: 700,
+              width: '100%',
+              fontSize: '1.08rem',
+              color: '#8b5cf6',
+              borderColor: '#8b5cf6',
+              background: 'rgba(139, 92, 246, 0.04)',
+              transition: 'background 0.2s, border 0.2s',
+              '&:hover': {
+                background: 'rgba(139, 92, 246, 0.10)',
+                borderColor: '#7c3aed',
+              },
+            }}
+            onClick={() => navigate('/habitmaster')}
+          >
+            HABITMASTER
           </Button>
         </Box>
       </Box>
