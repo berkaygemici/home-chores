@@ -19,6 +19,8 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
+import ArrowForward from '@mui/icons-material/ArrowForward'
+import AutoAwesome from '@mui/icons-material/AutoAwesome'
 
 import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
@@ -391,100 +393,344 @@ export default function App() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(120deg, #e0e7ff 0%, #f5f7fa 60%, #e3f0ff 100%)',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
         fontFamily: 'Inter, system-ui, sans-serif',
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%)',
+          zIndex: 0
+        }
       }}>
+        {/* Floating background elements */}
         <Box sx={{
-          p: { xs: 3, sm: 5 },
-          borderRadius: 5,
-          boxShadow: '0 12px 36px #2563eb33, 0 1.5px 8px #2563eb11',
-          bgcolor: '#fff',
-          minWidth: { xs: 300, sm: 380 },
-          maxWidth: 420,
+          position: 'absolute',
+          top: '15%',
+          left: '8%',
+          width: 120,
+          height: 120,
+          background: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+          animation: 'float 8s ease-in-out infinite',
+          '@keyframes float': {
+            '0%, 100%': { transform: 'translate(0, 0) rotate(0deg)' },
+            '33%': { transform: 'translate(30px, -30px) rotate(120deg)' },
+            '66%': { transform: 'translate(-20px, 20px) rotate(240deg)' }
+          }
+        }} />
+        <Box sx={{
+          position: 'absolute',
+          top: '70%',
+          right: '10%',
+          width: 80,
+          height: 80,
+          background: 'rgba(255, 255, 255, 0.08)',
+          borderRadius: '50%',
+          animation: 'float 6s ease-in-out infinite reverse',
+        }} />
+        <Box sx={{
+          position: 'absolute',
+          top: '40%',
+          left: '85%',
+          width: 60,
+          height: 60,
+          background: 'rgba(255, 255, 255, 0.06)',
+          borderRadius: '40% 60% 60% 40% / 60% 30% 70% 40%',
+          animation: 'float 10s ease-in-out infinite',
+        }} />
+
+        <Box sx={{
+          p: { xs: 4, sm: 6, md: 8 },
+          borderRadius: 6,
+          minWidth: { xs: 350, sm: 480, md: 600 },
+          maxWidth: { xs: 520, sm: 600, md: 800, lg: 900 },
+          width: { xs: '90%', sm: '85%', md: '80%', lg: '75%' },
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: 2,
+          gap: { xs: 3, md: 4 },
+          position: 'relative',
+          zIndex: 1,
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 32px 64px rgba(0, 0, 0, 0.15), 0 16px 32px rgba(0, 0, 0, 0.1)',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-5px)',
+            boxShadow: '0 40px 80px rgba(0, 0, 0, 0.2), 0 20px 40px rgba(0, 0, 0, 0.15)'
+          }
         }}>
-          <Box sx={{
-            bgcolor: 'linear-gradient(135deg, #2563eb 60%, #60a5fa 100%)',
-            background: 'linear-gradient(135deg, #2563eb 60%, #60a5fa 100%)',
-            borderRadius: '50%',
-            width: 64,
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            mb: 1.5,
-            boxShadow: '0 4px 16px #2563eb22',
-          }}>
-            <RocketLaunchIcon sx={{ color: '#fff', fontSize: 38 }} />
+          {/* Welcome Header */}
+          <Box sx={{ mb: { xs: 2, md: 3 } }}>
+            <Box sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: '50%',
+              width: { xs: 100, md: 120 },
+              height: { xs: 100, md: 120 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: { xs: '0 auto 24px', md: '0 auto 32px' },
+              boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
+              animation: 'pulse 3s ease-in-out infinite',
+              '@keyframes pulse': {
+                '0%, 100%': { transform: 'scale(1)' },
+                '50%': { transform: 'scale(1.08)' }
+              }
+            }}>
+              <RocketLaunchIcon sx={{ color: '#fff', fontSize: { xs: 50, md: 60 } }} />
+            </Box>
+            
+            <Typography variant="h3" sx={{
+              fontWeight: 900,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-1px',
+              mb: { xs: 2, md: 3 },
+              fontSize: { xs: '2.2rem', sm: '2.8rem', md: '3.5rem' }
+            }}>
+              Welcome Back!
+            </Typography>
+            
+            <Typography variant="h6" sx={{
+              color: '#64748b',
+              fontWeight: 600,
+              fontSize: { xs: '1.2rem', md: '1.4rem' },
+              mb: { xs: 1, md: 2 }
+            }}>
+              Your Productivity Universe
+            </Typography>
+            
+            <Typography variant="body1" sx={{
+              color: '#334155',
+              fontSize: { xs: '1.1rem', md: '1.2rem' },
+              fontWeight: 500,
+              maxWidth: { xs: '100%', md: '500px' },
+              mx: 'auto'
+            }}>
+              Choose your workspace to begin your journey
+            </Typography>
           </Box>
-          <h2 style={{ fontWeight: 800, color: '#2563eb', margin: 0, fontSize: '2rem', letterSpacing: '-1px' }}>Welcome!</h2>
-          <div style={{ color: '#64748b', fontSize: '1.08rem', marginBottom: 8, fontWeight: 500 }}>Your productivity hub</div>
-          <div style={{ color: '#334155', fontSize: '1.13rem', marginBottom: 24 }}>Choose your workspace:</div>
-          <Button
-            variant="contained"
-            sx={{
-              mb: 2,
-              borderRadius: 99,
-              fontWeight: 700,
-              width: '100%',
-              fontSize: '1.08rem',
-              boxShadow: '0 2px 8px #2563eb22',
-              background: 'linear-gradient(90deg, #2563eb 60%, #60a5fa 100%)',
-              transition: 'background 0.2s, box-shadow 0.2s',
-              '&:hover': {
-                background: 'linear-gradient(90deg, #1d4ed8 60%, #60a5fa 100%)',
-                boxShadow: '0 4px 16px #2563eb33',
-              },
-            }}
-            onClick={() => setMode('chores')}
-          >
-            CHORESMASTER
-          </Button>
-          <Button
-            variant="outlined"
-            sx={{
-              mb: 2,
-              borderRadius: 99,
-              fontWeight: 700,
-              width: '100%',
-              fontSize: '1.08rem',
-              color: '#2563eb',
-              borderColor: '#2563eb',
-              background: 'rgba(99, 102, 241, 0.04)',
-              transition: 'background 0.2s, border 0.2s',
-              '&:hover': {
-                background: 'rgba(99, 102, 241, 0.10)',
-                borderColor: '#1d4ed8',
-              },
-            }}
-            onClick={() => navigate('/taskmaster')}
-          >
-            TASKMASTER
-          </Button>
-          <Button
-            variant="outlined"
-            sx={{
-              borderRadius: 99,
-              fontWeight: 700,
-              width: '100%',
-              fontSize: '1.08rem',
-              color: '#8b5cf6',
-              borderColor: '#8b5cf6',
-              background: 'rgba(139, 92, 246, 0.04)',
-              transition: 'background 0.2s, border 0.2s',
-              '&:hover': {
-                background: 'rgba(139, 92, 246, 0.10)',
-                borderColor: '#7c3aed',
-              },
-            }}
-            onClick={() => navigate('/habitmaster')}
-          >
-            HABITMASTER
-          </Button>
+
+          {/* Project Cards */}
+          <Box sx={{ 
+            width: '100%', 
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', xl: 'repeat(3, 1fr)' },
+            gap: { xs: 2.5, md: 3, xl: 4 },
+            maxWidth: { xs: '100%', md: '600px', xl: '1000px' },
+            mx: 'auto'
+          }}>
+            <Box
+              onClick={() => setMode('chores')}
+              sx={{
+                p: { xs: 3, md: 4 },
+                borderRadius: { xs: 4, md: 5 },
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: '#fff',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                position: 'relative',
+                overflow: 'hidden',
+                minHeight: { xs: 'auto', md: '80px', xl: '140px' },
+                '&:hover': {
+                  transform: 'translateY(-3px) scale(1.02)',
+                  boxShadow: '0 12px 48px rgba(102, 126, 234, 0.4)',
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+                  transition: 'left 0.5s ease',
+                },
+                '&:hover::before': {
+                  left: '100%',
+                }
+              }}
+            >
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'row', xl: 'column' },
+                alignItems: 'center', 
+                gap: { xs: 2, md: 3, xl: 2 }, 
+                position: 'relative', 
+                zIndex: 1,
+                textAlign: { xs: 'left', xl: 'center' }
+              }}>
+                <HomeIcon sx={{ fontSize: { xs: 32, md: 40, xl: 48 } }} />
+                <Box sx={{ textAlign: { xs: 'left', xl: 'center' }, flex: { xs: 1, xl: 'unset' } }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, fontSize: { xs: '1.3rem', md: '1.5rem', xl: '1.3rem' } }}>
+                    CHORESMASTER
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: { xs: '1rem', md: '1.1rem', xl: '1rem' } }}>
+                    Organize your home tasks & routines
+                  </Typography>
+                </Box>
+                <ArrowForward sx={{ fontSize: { xs: 24, md: 28 }, opacity: 0.8, display: { xl: 'none' } }} />
+              </Box>
+            </Box>
+
+            <Box
+              onClick={() => navigate('/taskmaster')}
+              sx={{
+                p: { xs: 3, md: 4 },
+                borderRadius: { xs: 4, md: 5 },
+                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                color: '#fff',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 8px 32px rgba(240, 147, 251, 0.3)',
+                position: 'relative',
+                overflow: 'hidden',
+                minHeight: { xs: 'auto', md: '80px', xl: '140px' },
+                '&:hover': {
+                  transform: 'translateY(-3px) scale(1.02)',
+                  boxShadow: '0 12px 48px rgba(240, 147, 251, 0.4)',
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+                  transition: 'left 0.5s ease',
+                },
+                '&:hover::before': {
+                  left: '100%',
+                }
+              }}
+            >
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'row', xl: 'column' },
+                alignItems: 'center', 
+                gap: { xs: 2, md: 3, xl: 2 }, 
+                position: 'relative', 
+                zIndex: 1,
+                textAlign: { xs: 'left', xl: 'center' }
+              }}>
+                <CheckCircleIcon sx={{ fontSize: { xs: 32, md: 40, xl: 48 } }} />
+                <Box sx={{ textAlign: { xs: 'left', xl: 'center' }, flex: { xs: 1, xl: 'unset' } }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, fontSize: { xs: '1.3rem', md: '1.5rem', xl: '1.3rem' } }}>
+                    TASKMASTER
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: { xs: '1rem', md: '1.1rem', xl: '1rem' } }}>
+                    Manage projects & daily tasks
+                  </Typography>
+                </Box>
+                <ArrowForward sx={{ fontSize: { xs: 24, md: 28 }, opacity: 0.8, display: { xl: 'none' } }} />
+              </Box>
+            </Box>
+
+            <Box
+              onClick={() => navigate('/habitmaster')}
+              sx={{
+                p: { xs: 3, md: 4 },
+                borderRadius: { xs: 4, md: 5 },
+                background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                color: '#fff',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 8px 32px rgba(79, 172, 254, 0.3)',
+                position: 'relative',
+                overflow: 'hidden',
+                minHeight: { xs: 'auto', md: '80px', xl: '140px' },
+                '&:hover': {
+                  transform: 'translateY(-3px) scale(1.02)',
+                  boxShadow: '0 12px 48px rgba(79, 172, 254, 0.4)',
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+                  transition: 'left 0.5s ease',
+                },
+                '&:hover::before': {
+                  left: '100%',
+                }
+              }}
+            >
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'row', xl: 'column' },
+                alignItems: 'center', 
+                gap: { xs: 2, md: 3, xl: 2 }, 
+                position: 'relative', 
+                zIndex: 1,
+                textAlign: { xs: 'left', xl: 'center' }
+              }}>
+                <AutoAwesome sx={{ fontSize: { xs: 32, md: 40, xl: 48 } }} />
+                <Box sx={{ textAlign: { xs: 'left', xl: 'center' }, flex: { xs: 1, xl: 'unset' } }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, fontSize: { xs: '1.3rem', md: '1.5rem', xl: '1.3rem' } }}>
+                    HABITMASTER
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: { xs: '1rem', md: '1.1rem', xl: '1rem' } }}>
+                    Build lasting positive habits
+                  </Typography>
+                </Box>
+                <ArrowForward sx={{ fontSize: { xs: 24, md: 28 }, opacity: 0.8, display: { xl: 'none' } }} />
+              </Box>
+            </Box>
+          </Box>
+
+          {/* User Info & Logout */}
+          <Box sx={{ 
+            mt: 3, 
+            pt: 3, 
+            borderTop: '1px solid rgba(100, 116, 139, 0.2)',
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
+              {user?.email}
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<LogoutIcon />}
+              onClick={() => signOut(auth)}
+              sx={{
+                borderRadius: 3,
+                fontWeight: 600,
+                color: '#64748b',
+                borderColor: '#d1d5db',
+                fontSize: '0.9rem',
+                px: 2,
+                py: 1,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  borderColor: '#ef4444',
+                  color: '#ef4444',
+                  background: 'rgba(239, 68, 68, 0.05)',
+                  transform: 'scale(1.05)'
+                }
+              }}
+            >
+              Logout
+            </Button>
+          </Box>
         </Box>
       </Box>
     )
