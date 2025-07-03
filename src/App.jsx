@@ -692,6 +692,60 @@ export default function App() {
                 <ArrowForward sx={{ fontSize: { xs: 24, md: 28 }, opacity: 0.8, display: { xl: 'none' } }} />
               </Box>
             </Box>
+
+            <Box
+              onClick={() => navigate('/focusmaster')}
+              sx={{
+                p: { xs: 3, md: 4 },
+                borderRadius: { xs: 4, md: 5 },
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: '#fff',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                position: 'relative',
+                overflow: 'hidden',
+                minHeight: { xs: 'auto', md: '80px', xl: '140px' },
+                '&:hover': {
+                  transform: 'translateY(-3px) scale(1.02)',
+                  boxShadow: '0 12px 48px rgba(102, 126, 234, 0.4)',
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+                  transition: 'left 0.5s ease',
+                },
+                '&:hover::before': {
+                  left: '100%',
+                }
+              }}
+            >
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'row', xl: 'column' },
+                alignItems: 'center', 
+                gap: { xs: 2, md: 3, xl: 2 }, 
+                position: 'relative', 
+                zIndex: 1,
+                textAlign: { xs: 'left', xl: 'center' }
+              }}>
+                <RocketLaunchIcon sx={{ fontSize: { xs: 32, md: 40, xl: 48 } }} />
+                <Box sx={{ textAlign: { xs: 'left', xl: 'center' }, flex: { xs: 1, xl: 'unset' } }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, fontSize: { xs: '1.3rem', md: '1.5rem', xl: '1.3rem' } }}>
+                    FOCUSMASTER
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: { xs: '1rem', md: '1.1rem', xl: '1rem' } }}>
+                    Deep work sessions & Pomodoro timer
+                  </Typography>
+                </Box>
+                <ArrowForward sx={{ fontSize: { xs: 24, md: 28 }, opacity: 0.8, display: { xl: 'none' } }} />
+              </Box>
+            </Box>
           </Box>
 
           {/* User Info & Logout */}
