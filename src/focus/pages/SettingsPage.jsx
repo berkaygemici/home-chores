@@ -111,7 +111,7 @@ export default function SettingsPage({ user, onBack, settings = DEFAULT_SETTINGS
               <Slider
                 value={formSettings.pomodoroLength}
                 onChange={(e, value) => handleSettingChange('pomodoroLength', value)}
-                min={15}
+                min={1}
                 max={60}
                 step={5}
                 marks
