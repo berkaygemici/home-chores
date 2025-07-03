@@ -29,6 +29,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import HomeIcon from '@mui/icons-material/Home'
 import InsightsIcon from '@mui/icons-material/Insights'
+import NotesIcon from '@mui/icons-material/Notes'
 
 const SECTIONS = ['All', 'Kitchen', 'Closet', 'Bathroom', 'Living Room', 'Bedroom', 'Other']
 
@@ -699,17 +700,17 @@ export default function App() {
               sx={{
                 p: { xs: 3, md: 4 },
                 borderRadius: { xs: 4, md: 5 },
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
                 color: '#fff',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                boxShadow: '0 8px 32px rgba(17, 153, 142, 0.3)',
                 position: 'relative',
                 overflow: 'hidden',
                 minHeight: { xs: 'auto', md: '80px', xl: '140px' },
                 '&:hover': {
                   transform: 'translateY(-3px) scale(1.02)',
-                  boxShadow: '0 12px 48px rgba(102, 126, 234, 0.4)',
+                  boxShadow: '0 12px 48px rgba(17, 153, 142, 0.4)',
                 },
                 '&::before': {
                   content: '""',
@@ -799,6 +800,86 @@ export default function App() {
                   </Typography>
                 </Box>
                 <ArrowForward sx={{ fontSize: { xs: 24, md: 28 }, opacity: 0.8, display: { xl: 'none' } }} />
+              </Box>
+            </Box>
+
+            <Box sx={{ position: 'relative' }}>
+              {/* Coming Soon Label */}
+              <Box sx={{
+                position: 'absolute',
+                top: -12,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 10,
+                backgroundColor: '#ff6b35',
+                color: '#fff',
+                px: 2,
+                py: 0.5,
+                borderRadius: 3,
+                fontSize: '0.75rem',
+                fontWeight: 'bold',
+                boxShadow: '0 2px 8px rgba(255, 107, 53, 0.3)',
+                border: '2px solid #fff'
+              }}>
+                🚧 COMING SOON
+              </Box>
+              
+              <Box
+                sx={{
+                  p: { xs: 3, md: 4 },
+                  borderRadius: { xs: 4, md: 5 },
+                  background: 'linear-gradient(135deg, #8e44ad 0%, #3498db 100%)',
+                  color: '#fff',
+                  cursor: 'not-allowed',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 8px 32px rgba(142, 68, 173, 0.2)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  minHeight: { xs: 'auto', md: '80px', xl: '140px' },
+                  opacity: 0.7,
+                  filter: 'grayscale(20%)',
+                  '&:hover': {
+                    opacity: 0.8,
+                  }
+                }}
+              >
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: { xs: 'row', xl: 'column' },
+                  alignItems: 'center', 
+                  gap: { xs: 2, md: 3, xl: 2 }, 
+                  position: 'relative', 
+                  zIndex: 1,
+                  textAlign: { xs: 'left', xl: 'center' }
+                }}>
+                  <NotesIcon sx={{ fontSize: { xs: 32, md: 40, xl: 48 } }} />
+                  <Box sx={{ textAlign: { xs: 'left', xl: 'center' }, flex: { xs: 1, xl: 'unset' } }}>
+                    <Typography variant="h6" sx={{ fontWeight: 800, fontSize: { xs: '1.3rem', md: '1.5rem', xl: '1.3rem' } }}>
+                      NOTESMASTER
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9, fontSize: { xs: '1rem', md: '1.1rem', xl: '1rem' } }}>
+                      Markdown notes with backlinks & search
+                    </Typography>
+                  </Box>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 0.5,
+                    opacity: 0.6,
+                    fontSize: { xs: '0.8rem', md: '0.9rem' }
+                  }}>
+                    <Typography variant="caption" sx={{ display: { xl: 'block', xs: 'none' } }}>
+                      In Development
+                    </Typography>
+                    <Box sx={{ 
+                      width: 8, 
+                      height: 8, 
+                      borderRadius: '50%', 
+                      backgroundColor: '#ffc107',
+                      animation: 'pulse 2s infinite'
+                    }} />
+                  </Box>
+                </Box>
               </Box>
             </Box>
           </Box>

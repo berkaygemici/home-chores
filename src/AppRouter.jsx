@@ -9,6 +9,7 @@ import TaskMasterPage from './TaskMasterPage.jsx'
 import HabitMasterPage from './HabitMasterPage.jsx'
 import FocusMasterPage from './FocusMasterPage.jsx'
 import MetricsMasterPage from './MetricsMasterPage.jsx'
+import NotesMasterPage from './NotesMasterPage.jsx'
 import AuthPage from './AuthPage.jsx'
 
 export default function AppRouter() {
@@ -52,6 +53,7 @@ export default function AppRouter() {
       <Route path="/habitmaster" element={<HabitMasterPage />} />
       <Route path="/focusmaster" element={<FocusMasterPage />} />
       <Route path="/metricsmaster" element={<MetricsMasterPage />} />
+      <Route path="/notesmaster" element={<NotesMasterPage />} />
       <Route 
         path="/invite/:projectId/:invitationId" 
         element={
