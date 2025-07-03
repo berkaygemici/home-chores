@@ -56,7 +56,8 @@ export default function TaskPicker({
   onTaskSelect, 
   onCreateTask,
   onRefreshTasks,
-  loading = false
+  loading = false,
+  disabled = false
 }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredTasks, setFilteredTasks] = useState([])
@@ -135,9 +136,48 @@ export default function TaskPicker({
       <Paper sx={{ 
         p: 3, 
         borderRadius: 4, 
-        border: '1px solid #e2e8f0',
-        background: 'linear-gradient(135deg, #ffffff, #f8fafc)'
+        border: disabled ? '1px solid #d1d5db' : '1px solid #e2e8f0',
+        background: disabled 
+          ? 'linear-gradient(135deg, #f9fafb, #f3f4f6)' 
+          : 'linear-gradient(135deg, #ffffff, #f8fafc)',
+        opacity: disabled ? 0.7 : 1,
+        position: 'relative'
       }}>
+        {/* Disabled Overlay */}
+        {disabled && (
+          <Box sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: 'rgba(255, 255, 255, 0.8)',
+            backdropFilter: 'blur(2px)',
+            borderRadius: 4,
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            gap: 2
+          }}>
+            <Typography variant="h6" sx={{ 
+              fontWeight: 700, 
+              color: '#8b5cf6',
+              textAlign: 'center'
+            }}>
+              🧘‍♂️ Focus Mode Active
+            </Typography>
+            <Typography variant="body2" sx={{ 
+              color: '#64748b',
+              textAlign: 'center',
+              maxWidth: 250
+            }}>
+              Task selection is disabled during focus sessions. Complete your current session first!
+            </Typography>
+          </Box>
+        )}
+
         <Box sx={{ mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>
@@ -147,7 +187,7 @@ export default function TaskPicker({
               <Tooltip title="Refresh Tasks">
                 <IconButton 
                   onClick={onRefreshTasks}
-                  disabled={loading}
+                  disabled={loading || disabled}
                   size="small"
                   sx={{ 
                     bgcolor: '#f1f5f9',
@@ -162,11 +202,16 @@ export default function TaskPicker({
                 size="small"
                 startIcon={<AddIcon />}
                 onClick={() => setNewTaskModalOpen(true)}
+                disabled={disabled}
                 sx={{
                   borderRadius: 3,
                   fontWeight: 600,
                   bgcolor: '#8b5cf6',
-                  '&:hover': { bgcolor: '#7c3aed' }
+                  '&:hover': { bgcolor: '#7c3aed' },
+                  '&:disabled': {
+                    bgcolor: '#d1d5db',
+                    color: '#9ca3af'
+                  }
                 }}
               >
                 New Task
@@ -181,6 +226,7 @@ export default function TaskPicker({
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              disabled={disabled}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -196,6 +242,7 @@ export default function TaskPicker({
                 value={selectedSource}
                 label="Source"
                 onChange={(e) => setSelectedSource(e.target.value)}
+                disabled={disabled}
               >
                 <MenuItem value="all">All Tasks</MenuItem>
                 <MenuItem value="taskmaster">TaskMaster</MenuItem>
@@ -247,7 +294,13 @@ export default function TaskPicker({
                 <Button
                   size="small"
                   onClick={() => onTaskSelect(null)}
-                  sx={{ color: '#64748b' }}
+                  disabled={disabled}
+                  sx={{ 
+                    color: disabled ? '#9ca3af' : '#64748b',
+                    '&:disabled': {
+                      color: '#9ca3af'
+                    }
+                  }}
                 >
                   Clear
                 </Button>
@@ -295,7 +348,7 @@ export default function TaskPicker({
                 <ListItem key={task.id} sx={{ p: 0, mb: 1 }}>
                   <ListItemButton
                     onClick={() => onTaskSelect(task)}
-                    disabled={isSelected}
+                    disabled={isSelected || disabled}
                     sx={{
                       borderRadius: 3,
                       border: isSelected ? '2px solid #8b5cf6' : '1px solid #e2e8f0',
@@ -304,6 +357,10 @@ export default function TaskPicker({
                         bgcolor: isSelected ? '#f3f4f6' : '#f8fafc',
                         transform: 'translateY(-1px)',
                         boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                      },
+                      '&:disabled': {
+                        bgcolor: '#f9fafb',
+                        color: '#9ca3af'
                       },
                       transition: 'all 0.2s ease'
                     }}
@@ -403,17 +460,24 @@ export default function TaskPicker({
         onClose={() => setNewTaskModalOpen(false)}
         maxWidth="md"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        PaperProps={{ 
+          sx: { 
+            borderRadius: 3,
+            bgcolor: '#ffffff',
+            boxShadow: '0 12px 40px rgba(139, 92, 246, 0.15)'
+          } 
+        }}
       >
         <DialogTitle sx={{ 
-          background: 'linear-gradient(135deg, #fae8ff, #e879f9)',
-          color: '#86198f',
-          fontWeight: 700
+          background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+          color: '#ffffff',
+          fontWeight: 700,
+          borderRadius: '12px 12px 0 0'
         }}>
           ✨ Create New Task
         </DialogTitle>
         
-        <DialogContent sx={{ p: 3 }}>
+        <DialogContent sx={{ p: 3, bgcolor: '#ffffff' }}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <TextField
@@ -423,6 +487,16 @@ export default function TaskPicker({
                 onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
                 placeholder="What needs to be done?"
                 variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: '#ffffff',
+                    '& fieldset': { borderColor: '#d1d5db' },
+                    '&:hover fieldset': { borderColor: '#8b5cf6' },
+                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' }
+                  },
+                  '& .MuiInputLabel-root': { color: '#374151' },
+                  '& .MuiInputBase-input': { color: '#111827' }
+                }}
               />
             </Grid>
 
@@ -436,22 +510,41 @@ export default function TaskPicker({
                 multiline
                 rows={3}
                 variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: '#ffffff',
+                    '& fieldset': { borderColor: '#d1d5db' },
+                    '&:hover fieldset': { borderColor: '#8b5cf6' },
+                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' }
+                  },
+                  '& .MuiInputLabel-root': { color: '#374151' },
+                  '& .MuiInputBase-input': { color: '#111827' }
+                }}
               />
             </Grid>
 
             <Grid item xs={6}>
-              <FormControl fullWidth>
+              <FormControl fullWidth sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: '#ffffff',
+                  '& fieldset': { borderColor: '#d1d5db' },
+                  '&:hover fieldset': { borderColor: '#8b5cf6' },
+                  '&.Mui-focused fieldset': { borderColor: '#8b5cf6' }
+                },
+                '& .MuiInputLabel-root': { color: '#374151' }
+              }}>
                 <InputLabel>Priority</InputLabel>
                 <Select
                   value={taskForm.priority}
                   label="Priority"
                   onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}
+                  sx={{ color: '#111827' }}
                 >
                   {TASK_PRIORITIES.map(priority => (
                     <MenuItem key={priority.value} value={priority.value}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <FlagIcon sx={{ color: priority.color, fontSize: 16 }} />
-                        {priority.label}
+                        <Typography sx={{ color: '#111827' }}>{priority.label}</Typography>
                       </Box>
                     </MenuItem>
                   ))}
@@ -468,23 +561,42 @@ export default function TaskPicker({
                 onChange={(e) => setTaskForm({ ...taskForm, estimatedPomodoros: e.target.value })}
                 inputProps={{ min: 1, max: 20 }}
                 variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: '#ffffff',
+                    '& fieldset': { borderColor: '#d1d5db' },
+                    '&:hover fieldset': { borderColor: '#8b5cf6' },
+                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' }
+                  },
+                  '& .MuiInputLabel-root': { color: '#374151' },
+                  '& .MuiInputBase-input': { color: '#111827' }
+                }}
               />
             </Grid>
 
             {taskForm.addToTaskMaster && availableProjects.length > 0 && (
               <Grid item xs={12}>
-                <FormControl fullWidth>
+                <FormControl fullWidth sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: '#ffffff',
+                    '& fieldset': { borderColor: '#d1d5db' },
+                    '&:hover fieldset': { borderColor: '#8b5cf6' },
+                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' }
+                  },
+                  '& .MuiInputLabel-root': { color: '#374151' }
+                }}>
                   <InputLabel>Project (TaskMaster)</InputLabel>
                   <Select
                     value={taskForm.projectId}
                     label="Project (TaskMaster)"
                     onChange={(e) => setTaskForm({ ...taskForm, projectId: e.target.value })}
+                    sx={{ color: '#111827' }}
                   >
                     {availableProjects.map(project => (
                       <MenuItem key={project.id} value={project.id}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <FolderIcon sx={{ color: '#3b82f6', fontSize: 16 }} />
-                          {project.name}
+                          <Typography sx={{ color: '#111827' }}>{project.name}</Typography>
                         </Box>
                       </MenuItem>
                     ))}
@@ -523,10 +635,15 @@ export default function TaskPicker({
           </Grid>
         </DialogContent>
 
-        <DialogActions sx={{ p: 3, pt: 0 }}>
+        <DialogActions sx={{ p: 3, pt: 0, bgcolor: '#ffffff' }}>
           <Button 
             onClick={() => setNewTaskModalOpen(false)}
-            sx={{ borderRadius: 2, fontWeight: 600 }}
+            sx={{ 
+              borderRadius: 2, 
+              fontWeight: 600,
+              color: '#64748b',
+              '&:hover': { bgcolor: '#f1f5f9' }
+            }}
           >
             Cancel
           </Button>
@@ -538,7 +655,9 @@ export default function TaskPicker({
               borderRadius: 2,
               fontWeight: 600,
               bgcolor: '#8b5cf6',
-              '&:hover': { bgcolor: '#7c3aed' }
+              color: '#ffffff',
+              '&:hover': { bgcolor: '#7c3aed' },
+              '&:disabled': { bgcolor: '#d1d5db', color: '#9ca3af' }
             }}
           >
             Create Task

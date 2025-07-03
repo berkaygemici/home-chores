@@ -22,6 +22,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SettingsIcon from '@mui/icons-material/Settings'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
+import InsightsIcon from '@mui/icons-material/Insights'
 import HistoryIcon from '@mui/icons-material/History'
 import TimerIcon from '@mui/icons-material/Timer'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
@@ -34,6 +35,8 @@ import { db } from '../firebase'
 import FocusTimer from './components/FocusTimer'
 import TaskPicker from './components/TaskPicker'
 import DistractionLogger from './components/DistractionLogger'
+import AdvancedAnalytics from './components/AdvancedAnalytics'
+import FocusMode from './components/FocusMode'
 import SettingsPage from './pages/SettingsPage'
 
 import { DEFAULT_SETTINGS, MOTIVATIONAL_QUOTES } from './constants/focusConstants'
@@ -71,7 +74,10 @@ export default function FocusMaster({ user, onBack }) {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
   const [distractionLoggerOpen, setDistractionLoggerOpen] = useState(false)
   const [currentSessionId, setCurrentSessionId] = useState(null)
+  const [currentSession, setCurrentSession] = useState(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [showAnalytics, setShowAnalytics] = useState(false)
+  const [focusModeActive, setFocusModeActive] = useState(false)
 
   // Load data on mount
   useEffect(() => {
@@ -263,19 +269,53 @@ export default function FocusMaster({ user, onBack }) {
     )
   }
 
+  if (showAnalytics) {
+    return (
+      <AdvancedAnalytics 
+        sessions={sessions}
+        distractions={distractions}
+        tasks={tasks}
+        onBack={() => setShowAnalytics(false)}
+      />
+    )
+  }
+
   return (
     <Container maxWidth="lg" sx={{ py: 3, minHeight: '100vh', bgcolor: '#f8fafc' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBackIcon />}
-            onClick={onBack}
-            sx={{ borderRadius: 2, fontWeight: 600, borderColor: '#e2e8f0' }}
+          <Tooltip
+            title={focusModeActive ? "Focus mode is active - finish your session first! 🧘‍♂️" : ""}
+            arrow
           >
-            Back to Home
-          </Button>
+            <span>
+              <Button
+                variant="outlined"
+                startIcon={<ArrowBackIcon />}
+                onClick={() => {
+                  if (focusModeActive) {
+                    showSnackbar('🧘‍♂️ Focus mode is active! Complete your session first to leave.', 'info')
+                  } else {
+                    onBack()
+                  }
+                }}
+                disabled={focusModeActive}
+                sx={{ 
+                  borderRadius: 2, 
+                  fontWeight: 600, 
+                  borderColor: focusModeActive ? '#d1d5db' : '#e2e8f0',
+                  color: focusModeActive ? '#9ca3af' : 'inherit',
+                  '&:disabled': {
+                    borderColor: '#d1d5db',
+                    color: '#9ca3af'
+                  }
+                }}
+              >
+                Back to Home
+              </Button>
+            </span>
+          </Tooltip>
           <Box sx={{ 
             background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', 
             borderRadius: 3, 
@@ -303,24 +343,78 @@ export default function FocusMaster({ user, onBack }) {
         </Box>
         
         <Stack direction="row" spacing={2}>
-          <Button
-            variant="outlined"
-            startIcon={<SettingsIcon />}
-            onClick={() => setShowSettings(true)}
-            sx={{ 
-              borderRadius: 3, 
-              fontWeight: 600,
-              borderColor: '#8b5cf6',
-              color: '#8b5cf6',
-              '&:hover': { 
-                borderColor: '#7c3aed',
-                color: '#7c3aed',
-                bgcolor: 'rgba(139, 92, 246, 0.05)'
-              }
-            }}
+          <Tooltip
+            title={focusModeActive ? "Focus mode is active - finish your session first! 🧘‍♂️" : ""}
+            arrow
           >
-            Settings
-          </Button>
+            <span>
+              <Button
+                variant="outlined"
+                startIcon={<InsightsIcon />}
+                onClick={() => {
+                  if (focusModeActive) {
+                    showSnackbar('🧘‍♂️ Focus mode is active! Complete your session first to access analytics.', 'info')
+                  } else {
+                    setShowAnalytics(true)
+                  }
+                }}
+                disabled={focusModeActive}
+                sx={{ 
+                  borderRadius: 3, 
+                  fontWeight: 600,
+                  borderColor: focusModeActive ? '#d1d5db' : '#3b82f6',
+                  color: focusModeActive ? '#9ca3af' : '#3b82f6',
+                  '&:hover': focusModeActive ? {} : { 
+                    borderColor: '#2563eb',
+                    color: '#2563eb',
+                    bgcolor: 'rgba(59, 130, 246, 0.05)'
+                  },
+                  '&:disabled': {
+                    borderColor: '#d1d5db',
+                    color: '#9ca3af'
+                  }
+                }}
+              >
+                Analytics
+              </Button>
+            </span>
+          </Tooltip>
+          <Tooltip
+            title={focusModeActive ? "Focus mode is active - finish your session first! 🧘‍♂️" : ""}
+            arrow
+          >
+            <span>
+              <Button
+                variant="outlined"
+                startIcon={<SettingsIcon />}
+                onClick={() => {
+                  if (focusModeActive) {
+                    showSnackbar('🧘‍♂️ Focus mode is active! Complete your session first to access settings.', 'info')
+                  } else {
+                    setShowSettings(true)
+                  }
+                }}
+                disabled={focusModeActive}
+                sx={{ 
+                  borderRadius: 3, 
+                  fontWeight: 600,
+                  borderColor: focusModeActive ? '#d1d5db' : '#8b5cf6',
+                  color: focusModeActive ? '#9ca3af' : '#8b5cf6',
+                  '&:hover': focusModeActive ? {} : { 
+                    borderColor: '#7c3aed',
+                    color: '#7c3aed',
+                    bgcolor: 'rgba(139, 92, 246, 0.05)'
+                  },
+                  '&:disabled': {
+                    borderColor: '#d1d5db',
+                    color: '#9ca3af'
+                  }
+                }}
+              >
+                Settings
+              </Button>
+            </span>
+          </Tooltip>
         </Stack>
       </Box>
 
@@ -429,6 +523,19 @@ export default function FocusMaster({ user, onBack }) {
         </Grid>
       </Grid>
 
+      {/* Focus Mode Section */}
+      {focusModeActive && (
+        <Box sx={{ mb: 4 }}>
+          <FocusMode
+            isActive={focusModeActive}
+            onToggle={() => setFocusModeActive(!focusModeActive)}
+            currentSession={currentSession}
+            onLogDistraction={handleLogDistraction}
+            settings={settings}
+          />
+        </Box>
+      )}
+
       {/* Main Content */}
       <Grid container spacing={4}>
         {/* Timer Section */}
@@ -447,15 +554,30 @@ export default function FocusMaster({ user, onBack }) {
 
         {/* Task Selection */}
         <Grid item xs={12} md={4}>
-          <TaskPicker
-            tasks={tasks}
-            currentTask={currentTask}
-            projects={projects}
-            onTaskSelect={handleTaskSelect}
-            onCreateTask={handleTaskCreate}
-            onRefreshTasks={handleRefreshTasks}
-            loading={loading}
-          />
+          <Stack spacing={3}>
+            {/* Focus Mode Toggle (when inactive) */}
+            {!focusModeActive && (
+              <FocusMode
+                isActive={focusModeActive}
+                onToggle={() => setFocusModeActive(!focusModeActive)}
+                currentSession={currentSession}
+                onLogDistraction={handleLogDistraction}
+                settings={settings}
+              />
+            )}
+            
+            {/* Task Selection */}
+            <TaskPicker
+              tasks={tasks}
+              currentTask={currentTask}
+              projects={projects}
+              onTaskSelect={handleTaskSelect}
+              onCreateTask={handleTaskCreate}
+              onRefreshTasks={handleRefreshTasks}
+              loading={loading}
+              disabled={focusModeActive}
+            />
+          </Stack>
         </Grid>
       </Grid>
 

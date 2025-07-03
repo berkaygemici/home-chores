@@ -39,14 +39,17 @@ export const SESSION_TYPES = {
 
 // Distraction categories
 export const DISTRACTION_CATEGORIES = [
-  { value: 'social', label: 'Social Media', icon: '📱', color: '#ef4444' },
-  { value: 'noise', label: 'External Noise', icon: '🔊', color: '#f59e0b' },
-  { value: 'hunger', label: 'Hunger/Thirst', icon: '🍎', color: '#10b981' },
-  { value: 'thoughts', label: 'Wandering Thoughts', icon: '💭', color: '#8b5cf6' },
-  { value: 'interruption', label: 'Interruption', icon: '🚪', color: '#06b6d4' },
-  { value: 'fatigue', label: 'Fatigue', icon: '😴', color: '#64748b' },
-  { value: 'other', label: 'Other', icon: '❓', color: '#84cc16' }
+  { id: 'social', name: 'Social Media', label: 'Social Media', icon: '📱', color: '#ef4444', value: 'social' },
+  { id: 'noise', name: 'External Noise', label: 'External Noise', icon: '🔊', color: '#f59e0b', value: 'noise' },
+  { id: 'hunger', name: 'Hunger/Thirst', label: 'Hunger/Thirst', icon: '🍎', color: '#10b981', value: 'hunger' },
+  { id: 'thoughts', name: 'Wandering Thoughts', label: 'Wandering Thoughts', icon: '💭', color: '#8b5cf6', value: 'thoughts' },
+  { id: 'interruption', name: 'Interruption', label: 'Interruption', icon: '🚪', color: '#06b6d4', value: 'interruption' },
+  { id: 'fatigue', name: 'Fatigue', label: 'Fatigue', icon: '😴', color: '#64748b', value: 'fatigue' },
+  { id: 'other', name: 'Other', label: 'Other', icon: '❓', color: '#84cc16', value: 'other' }
 ]
+
+// Alias for compatibility with AdvancedAnalytics component
+export const DISTRACTION_TYPES = DISTRACTION_CATEGORIES
 
 // Task priority levels
 export const TASK_PRIORITIES = [

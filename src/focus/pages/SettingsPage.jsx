@@ -18,30 +18,39 @@ import {
   Alert
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import SaveIcon from '@mui/icons-material/Save'
 import RestoreIcon from '@mui/icons-material/Restore'
 
 import { DEFAULT_SETTINGS } from '../constants/focusConstants'
 
 export default function SettingsPage({ user, onBack, settings = DEFAULT_SETTINGS, onSaveSettings }) {
   const [formSettings, setFormSettings] = useState(settings)
-  const [hasChanges, setHasChanges] = useState(false)
+  const [lastSaved, setLastSaved] = useState(null)
 
-  const handleSettingChange = (key, value) => {
-    setFormSettings(prev => ({ ...prev, [key]: value }))
-    setHasChanges(true)
-  }
-
-  const handleSave = () => {
+  const handleSettingChange = async (key, value) => {
+    const newSettings = { ...formSettings, [key]: value }
+    setFormSettings(newSettings)
+    
+    // Auto-save immediately
     if (onSaveSettings) {
-      onSaveSettings(formSettings)
+      try {
+        await onSaveSettings(newSettings)
+        setLastSaved(new Date())
+      } catch (error) {
+        console.error('Failed to save setting:', error)
+      }
     }
-    setHasChanges(false)
   }
 
-  const handleReset = () => {
+  const handleReset = async () => {
     setFormSettings(DEFAULT_SETTINGS)
-    setHasChanges(true)
+    if (onSaveSettings) {
+      try {
+        await onSaveSettings(DEFAULT_SETTINGS)
+        setLastSaved(new Date())
+      } catch (error) {
+        console.error('Failed to reset settings:', error)
+      }
+    }
   }
 
   return (
@@ -62,7 +71,18 @@ export default function SettingsPage({ user, onBack, settings = DEFAULT_SETTINGS
           </Typography>
         </Box>
         
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          {lastSaved && (
+            <Typography variant="body2" sx={{ 
+              color: '#10b981', 
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5
+            }}>
+              ✓ Auto-saved {lastSaved.toLocaleTimeString()}
+            </Typography>
+          )}
           <Button
             variant="outlined"
             startIcon={<RestoreIcon />}
@@ -71,28 +91,10 @@ export default function SettingsPage({ user, onBack, settings = DEFAULT_SETTINGS
           >
             Reset to Defaults
           </Button>
-          <Button
-            variant="contained"
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
-            disabled={!hasChanges}
-            sx={{
-              borderRadius: 2,
-              fontWeight: 600,
-              bgcolor: '#8b5cf6',
-              '&:hover': { bgcolor: '#7c3aed' }
-            }}
-          >
-            Save Changes
-          </Button>
         </Box>
       </Box>
 
-      {hasChanges && (
-        <Alert severity="info" sx={{ mb: 4, borderRadius: 3 }}>
-          You have unsaved changes. Don't forget to save your settings!
-        </Alert>
-      )}
+
 
       <Grid container spacing={4}>
         {/* Timer Settings */}
@@ -255,27 +257,38 @@ export default function SettingsPage({ user, onBack, settings = DEFAULT_SETTINGS
           </Paper>
         </Grid>
 
-        {/* Coming Soon Section */}
+        {/* Recently Added Section */}
         <Grid item xs={12}>
           <Paper sx={{ 
             p: 4, 
             borderRadius: 4, 
-            border: '1px solid #e2e8f0',
-            background: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)'
+            border: '1px solid #10b981',
+            background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)'
           }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1e293b' }}>
+              ✅ Recently Added Features
+            </Typography>
+            <Typography variant="body1" sx={{ color: '#064e3b', mb: 2 }}>
+              These powerful features are now available:
+            </Typography>
+            <Box component="ul" sx={{ color: '#064e3b', pl: 2, mb: 3 }}>
+              <li><strong>Advanced Analytics:</strong> Comprehensive insights, productivity scoring, and data export</li>
+              <li><strong>Focus Mode:</strong> Distraction blocking, mindfulness prompts, and attention training</li>
+              <li><strong>Auto-Save Settings:</strong> Changes save automatically without clicking save</li>
+            </Box>
+            
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1e293b' }}>
               🚀 Coming Soon
             </Typography>
             <Typography variant="body1" sx={{ color: '#64748b', mb: 2 }}>
-              These features are in development and will be available in future updates:
+              These features are in development for future updates:
             </Typography>
             <Box component="ul" sx={{ color: '#64748b', pl: 2 }}>
               <li>Background soundscapes (white noise, rain, café ambience)</li>
-              <li>Advanced analytics and insights</li>
               <li>Custom break activities and exercises</li>
               <li>Team collaboration and shared sessions</li>
               <li>Integration with calendar apps</li>
-              <li>Distraction blocking features</li>
+              <li>AI-powered productivity coaching</li>
             </Box>
           </Paper>
         </Grid>
