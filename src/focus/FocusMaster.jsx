@@ -523,7 +523,7 @@ export default function FocusMaster({ user, onBack }) {
         </Grid>
       </Grid>
 
-      {/* Focus Mode Section */}
+      {/* Focus Mode Section - Full Width Banner when Active */}
       {focusModeActive && (
         <Box sx={{ mb: 4 }}>
           <FocusMode
@@ -536,48 +536,69 @@ export default function FocusMaster({ user, onBack }) {
         </Box>
       )}
 
-      {/* Main Content */}
+      {/* Main Content - Side by Side Layout */}
       <Grid container spacing={4}>
-        {/* Timer Section */}
+        {/* Left Column - Timer */}
         <Grid item xs={12} md={8}>
-          <FocusTimer
-            settings={settings}
-            currentTask={currentTask}
-            onSessionComplete={handleSessionComplete}
-            onLogDistraction={(sessionId) => {
-              setCurrentSessionId(sessionId)
-              setDistractionLoggerOpen(true)
-            }}
-            onTaskComplete={handleTaskComplete}
-          />
-        </Grid>
-
-        {/* Task Selection */}
-        <Grid item xs={12} md={4}>
           <Stack spacing={3}>
-            {/* Focus Mode Toggle (when inactive) */}
+            {/* Focus Mode Toggle (compact version when inactive) */}
             {!focusModeActive && (
-              <FocusMode
-                isActive={focusModeActive}
-                onToggle={() => setFocusModeActive(!focusModeActive)}
-                currentSession={currentSession}
-                onLogDistraction={handleLogDistraction}
-                settings={settings}
-              />
+              <Paper sx={{ 
+                p: 2, 
+                borderRadius: 3,
+                border: '1px solid #e2e8f0',
+                background: 'linear-gradient(135deg, #f8fafc, #ffffff)'
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                    🧘‍♂️ Focus Mode
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => setFocusModeActive(true)}
+                    sx={{
+                      borderRadius: 2,
+                      fontWeight: 600,
+                      bgcolor: '#8b5cf6',
+                      '&:hover': { bgcolor: '#7c3aed' }
+                    }}
+                  >
+                    Activate
+                  </Button>
+                </Box>
+                <Typography variant="body2" sx={{ color: '#64748b', mt: 1 }}>
+                  Enable distraction blocking and mindfulness features
+                </Typography>
+              </Paper>
             )}
-            
-            {/* Task Selection */}
-            <TaskPicker
-              tasks={tasks}
+
+            {/* Focus Timer */}
+            <FocusTimer
+              settings={settings}
               currentTask={currentTask}
-              projects={projects}
-              onTaskSelect={handleTaskSelect}
-              onCreateTask={handleTaskCreate}
-              onRefreshTasks={handleRefreshTasks}
-              loading={loading}
-              disabled={focusModeActive}
+              onSessionComplete={handleSessionComplete}
+              onLogDistraction={(sessionId) => {
+                setCurrentSessionId(sessionId)
+                setDistractionLoggerOpen(true)
+              }}
+              onTaskComplete={handleTaskComplete}
             />
           </Stack>
+        </Grid>
+
+        {/* Right Column - Task Selection (Always Here!) */}
+        <Grid item xs={12} md={4}>
+          <TaskPicker
+            tasks={tasks}
+            currentTask={currentTask}
+            projects={projects}
+            onTaskSelect={handleTaskSelect}
+            onCreateTask={handleTaskCreate}
+            onRefreshTasks={handleRefreshTasks}
+            loading={loading}
+            disabled={focusModeActive}
+          />
         </Grid>
       </Grid>
 
