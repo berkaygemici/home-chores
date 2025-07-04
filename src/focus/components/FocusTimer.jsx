@@ -60,70 +60,7 @@ export default function FocusTimer({
   const intervalRef = useRef(null)
   const timerModeColor = getTimerModeColor(timerMode)
 
-  // Initialize timer when mode or settings change
-  useEffect(() => {
-    let duration
-    switch (timerMode) {
-      case TIMER_MODES.POMODORO:
-        duration = minutesToSeconds(settings.pomodoroLength)
-        break
-      case TIMER_MODES.SHORT_BREAK:
-        duration = minutesToSeconds(settings.shortBreakLength)
-        break
-      case TIMER_MODES.LONG_BREAK:
-        duration = minutesToSeconds(settings.longBreakLength)
-        break
-      default:
-        duration = minutesToSeconds(settings.pomodoroLength)
-    }
-    
-    if (timerState === TIMER_STATES.IDLE) {
-      setTimeLeft(duration)
-      setTotalTime(duration)
-    }
-  }, [timerMode, settings, timerState])
-
-  // Timer countdown logic
-  useEffect(() => {
-    if (timerState === TIMER_STATES.RUNNING) {
-      intervalRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            handleTimerComplete()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [timerState, handleTimerComplete])
-
-  // Update document title with timer
-  useEffect(() => {
-    if (settings.showTimerInTitle && timerState === TIMER_STATES.RUNNING) {
-      document.title = `${formatTime(timeLeft)} - ${getTimerModeLabel(timerMode)} | FocusMaster`
-    } else if (settings.showTimerInTitle) {
-      document.title = 'FocusMaster'
-    }
-
-    return () => {
-      if (settings.showTimerInTitle) {
-        document.title = 'FocusMaster'
-      }
-    }
-  }, [timeLeft, timerMode, timerState, settings.showTimerInTitle])
-
+  // Function definitions (must be before useEffects that use them)
   const handleStart = useCallback(() => {
     if (timerState === TIMER_STATES.IDLE) {
       const sessionId = `session_${Date.now()}`
@@ -223,6 +160,70 @@ export default function FocusTimer({
     onTaskComplete,
     handleStart
   ])
+
+  // Initialize timer when mode or settings change
+  useEffect(() => {
+    let duration
+    switch (timerMode) {
+      case TIMER_MODES.POMODORO:
+        duration = minutesToSeconds(settings.pomodoroLength)
+        break
+      case TIMER_MODES.SHORT_BREAK:
+        duration = minutesToSeconds(settings.shortBreakLength)
+        break
+      case TIMER_MODES.LONG_BREAK:
+        duration = minutesToSeconds(settings.longBreakLength)
+        break
+      default:
+        duration = minutesToSeconds(settings.pomodoroLength)
+    }
+    
+    if (timerState === TIMER_STATES.IDLE) {
+      setTimeLeft(duration)
+      setTotalTime(duration)
+    }
+  }, [timerMode, settings, timerState])
+
+  // Timer countdown logic
+  useEffect(() => {
+    if (timerState === TIMER_STATES.RUNNING) {
+      intervalRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            handleTimerComplete()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [timerState, handleTimerComplete])
+
+  // Update document title with timer
+  useEffect(() => {
+    if (settings.showTimerInTitle && timerState === TIMER_STATES.RUNNING) {
+      document.title = `${formatTime(timeLeft)} - ${getTimerModeLabel(timerMode)} | FocusMaster`
+    } else if (settings.showTimerInTitle) {
+      document.title = 'FocusMaster'
+    }
+
+    return () => {
+      if (settings.showTimerInTitle) {
+        document.title = 'FocusMaster'
+      }
+    }
+  }, [timeLeft, timerMode, timerState, settings.showTimerInTitle])
 
   const handleSkip = () => {
     const nextMode = getNextTimerMode(timerMode, sessionCount, settings.sessionsUntilLongBreak)
