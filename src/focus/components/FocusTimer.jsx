@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Box,
   Typography,
@@ -85,7 +85,7 @@ export default function FocusTimer({
 
   // Timer countdown logic
   useEffect(() => {
-    if (timerState === TIMER_STATES.RUNNING && timeLeft > 0) {
+    if (timerState === TIMER_STATES.RUNNING) {
       intervalRef.current = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -107,7 +107,7 @@ export default function FocusTimer({
         clearInterval(intervalRef.current)
       }
     }
-  }, [timerState, timeLeft])
+  }, [timerState, handleTimerComplete])
 
   // Update document title with timer
   useEffect(() => {
@@ -124,14 +124,14 @@ export default function FocusTimer({
     }
   }, [timeLeft, timerMode, timerState, settings.showTimerInTitle])
 
-  const handleStart = () => {
+  const handleStart = useCallback(() => {
     if (timerState === TIMER_STATES.IDLE) {
       const sessionId = `session_${Date.now()}`
       setCurrentSessionId(sessionId)
       setSessionNotes('')
     }
     setTimerState(TIMER_STATES.RUNNING)
-  }
+  }, [timerState])
 
   const handlePause = () => {
     setTimerState(TIMER_STATES.PAUSED)
@@ -144,7 +144,7 @@ export default function FocusTimer({
     setSessionNotes('')
   }
 
-  const handleTimerComplete = () => {
+  const handleTimerComplete = useCallback(() => {
     setTimerState(TIMER_STATES.COMPLETED)
     
     // Play sound notification
@@ -207,7 +207,22 @@ export default function FocusTimer({
         }, 1000)
       }
     }, 2000)
-  }
+  }, [
+    settings.soundEnabled, 
+    settings.notificationsEnabled, 
+    settings.autoStartPomodoros, 
+    settings.autoStartBreaks, 
+    settings.sessionsUntilLongBreak,
+    timerMode, 
+    currentSessionId, 
+    totalTime, 
+    currentTask, 
+    sessionNotes, 
+    sessionCount, 
+    onSessionComplete, 
+    onTaskComplete,
+    handleStart
+  ])
 
   const handleSkip = () => {
     const nextMode = getNextTimerMode(timerMode, sessionCount, settings.sessionsUntilLongBreak)
